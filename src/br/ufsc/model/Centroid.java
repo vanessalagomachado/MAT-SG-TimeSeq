@@ -101,7 +101,8 @@ public class Centroid extends Point implements Comparable{
         if(getSti()!=null){
             aux += "\nTime: "+sti;
         }
-                aux += "\nLocal mapped: ";
+                aux += "\nCell: "+cellReference
+                        +"\nLocal mapped: ";
         for (Point p : pointListSource) {
             aux += p.getTrajectory().getId() + " - " + p.getrId() + ", ";
         }
@@ -137,6 +138,7 @@ public class Centroid extends Point implements Comparable{
                 txt += " ], ";
             }
         }
+//        System.out.println("Lista STI: "+listSTI);
         //txt += "";
 
         if (!listSTI.isEmpty()) {

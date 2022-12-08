@@ -1,5 +1,8 @@
 /*
  Vanessa Lago Machado
+
+this version the temporal time is considering only the time during a DAY, 
+the same hours of the different days are considered equals
  */
 package br.ufsc.methods;
 
@@ -14,10 +17,8 @@ import br.ufsc.model.TemporalAspect;
 import br.ufsc.model.Util;
 import br.ufsc.util.CSVWriter;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.text.DecimalFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -32,14 +33,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
  *
  * @author vanes
  */
-public class MATSG {
+public class MATSG_bkp {
 
     // setting to execute method
     String SEPARATOR;
@@ -82,7 +82,7 @@ public class MATSG {
     private static List<Centroid> listRepPoint;
 
     // To create the Temporal summarization
-    private ArrayList<Date> listTimesInCell; //List of all time marks in a cell -- update: option times in Date
+    private List<Integer> listTimesInCell; //List of all time marks in a cell 
 
     // To create the Spatial summarization
     private double avgX, avgY;
@@ -127,7 +127,7 @@ public class MATSG {
         cId = -1;
 
         //initialization of aux lists
-        listTimesInCell = new ArrayList<Date>();
+        listTimesInCell = new ArrayList<Integer>();
         spatialCellGrid = new HashMap<String, BitSet>();
         sematicNumericFusionVal = new HashMap<String, List<Double>>();
         sematicCategoricalSummarizationVal = new HashMap<String, Map<String, Integer>>();
@@ -146,9 +146,9 @@ public class MATSG {
         load(); // Load dataset follow data model representation
 
 //        spatialThreshold = computeSpatialThreshold() * valueZ; // Calculates the spatial threshold according with the informed z
-        spatialThreshold = computeSpatialThresholdOutliers() * valueZ; // Calculates the spatial threshold according with the informed z
+        spatialThreshold = computeSpatialThresholdOutliers()* valueZ; // Calculates the spatial threshold according with the informed z
 //        System.out.println("Spatial tau: "+spatialThreshold);
-
+        
         cellSizeSpace = spatialThreshold * 0.7071; // Calcultes size of the cells
         allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
 
@@ -163,8 +163,7 @@ public class MATSG {
         computeCentroid();
 
 //        System.out.println("-----\n\n RT: " + representativeTrajectory);
-        writeRepresentativeTrajectory("..\\" + directory + "result\\" + filename + "[output] - z" + this.valueZ, ext);
-        writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext);
+        writeRepresentativeTrajectory("..\\" + directory +"result\\" + filename + "[output] - z" + this.valueZ, ext);
 //        System.out.println("dir: "+"..\\" + directory +"result\\"+ filename + "[output] - z" + this.valueZ);
     }
 
@@ -329,12 +328,13 @@ public class MATSG {
      */
     public void findCentroid() {
 
+
         //Create iterator object of all spatial grid cells
         Iterator<String> cell = spatialCellGrid.keySet().iterator();
 //        System.out.println("tau points: "+threshold_rc);
         while (cell.hasNext()) {
             String cellAnalyzed = cell.next(); //Selects next cell
-
+            
             //Gets amount of points in the current cell
             int qntPoints = spatialCellGrid.get(cellAnalyzed).cardinality();
 //            System.out.println("Cell Analyzed: "+cellAnalyzed+" | points: "+qntPoints);
@@ -348,7 +348,7 @@ public class MATSG {
                     pointsInCell.add(points.get(pointId - 1));
 
                     //Temporal data 
-                    listTimesInCell.add(points.get(pointId - 1).getTime().getStartTime()); // update: add start time (in Date) of point in a list 
+                    listTimesInCell.add(points.get(pointId - 1).getTimeInMinutes()); // add time (in minutes) of point in a list 
                 }
                 presentCell = cellAnalyzed;
                 //Temporal data
@@ -367,7 +367,7 @@ public class MATSG {
         for (Centroid representativePoint : listRepPoint) {
             resetValuesToSummarization();
             representativeTrajectory.addPoint(representativePoint);
-
+            
             for (Point p : representativePoint.getPointListSource()) {
                 // Spatial data
                 avgX += p.getX();
@@ -455,7 +455,8 @@ public class MATSG {
             resetValuesToSummarization();
         }
 
-    }
+        }
+    
 
     /**
      * find the SemanticAspect object by the order
@@ -501,7 +502,7 @@ public class MATSG {
      * @return Map -- All STI (Significant Temporal Interval) and the number of
      * points in relative interval
      */
-    public void defineRepPointsInMinutes(List<Integer> times) {
+    public void defineRepPoints(List<Integer> times) {
 
         List<STI> listSTI = new ArrayList<>();
 
@@ -516,14 +517,15 @@ public class MATSG {
         float sumDifferences = 0, sumDifferencesSD = 0;
         for (int i = 1; i < times.size(); i++) {
             int auxDif = times.get(i) - times.get(i - 1);
-            if (auxDif > 0) {
+            if(auxDif > 0){
                 differences.add(auxDif);
                 sumDifferences += differences.get(differences.size() - 1);
             }
         }
-
+        
         //Average temporal differences 
         float avg = sumDifferences / differences.size();
+
 
         if (differences.size() > 1) { //IF has more than 2 occurrences
             //order temporal differences
@@ -543,36 +545,37 @@ public class MATSG {
 
                 //2nd - Compute the SD
                 for (int i = 0; i < differences.size(); i++) {
-                    sumDifferencesSD += Math.pow(((int) differences.get(i) - avg), 2);
+                    sumDifferencesSD += Math.pow(((int)differences.get(i) - avg), 2);
                 }
                 float SD = sumDifferencesSD / differences.size();
                 SD = (float) Math.sqrt(SD);
 
                 //3rd - compute the valid interval (the value of median of temporal differences  minus and plus (- / +) SD)
+
                 float lessValue = med - SD;
                 float upperValue = med + SD;
-
-                //for removing outliers:
+                
+                    //for removing outliers:
                 //remove values temporal differences less and upper the valid interval defined
                 for (int i = 0; i < differences.size(); i++) {
-                    if (differences.get(i) < lessValue) {
-                        sumDifferences -= (int) differences.get(i);
-                        differences.remove((Integer) differences.get(i));
+                    if(differences.get(i) < lessValue){
+                        sumDifferences -= (int)differences.get(i);
+                        differences.remove((Integer)differences.get(i));
                         i--;
                     } else {
                         break;
                     }
                 }
-
+                
                 for (int i = differences.size() - 1; i >= 0; i--) {
-                    if (differences.get(i) > upperValue) {
-                        sumDifferences -= (int) differences.get(i);
-                        differences.remove((Integer) differences.get(i));
+                    if(differences.get(i) > upperValue){
+                        sumDifferences -= (int)differences.get(i);
+                        differences.remove((Integer)differences.get(i));
                     } else {
                         break;
                     }
                 }
-
+                
 //                System.out.println("Dif 2: "+differences);
                 // update threshold value to average value of temporal differences considering only valid values
                 threshold = Math.floorDiv((int) sumDifferences, differences.size());
@@ -592,6 +595,7 @@ public class MATSG {
             and two consecutive occurrences are considered a significant temporal interval (STI), 
             considering the threshold value, then it is considered a new valid interval
              */
+            
             if (i != times.size() - 1 && (times.get(i) + threshold) >= times.get(i + 1)) {
                 try {
                     aspTime.getStartTime();
@@ -620,181 +624,16 @@ public class MATSG {
                 cont = 1;
                 aspTime = null;
             }
-
+            
         }
 
         // Ordernate temporal ranking 
         listSTI.sort(Comparator.comparing(STI::getProportion).reversed()); // order (DESC) STI by proportion
 
-        // based into valid interval, it is created the Representative points for further compute them
-        for (STI eachSTI : listSTI) {
-
-//            System.out.println("RV: "+threshold_rv);
-//            System.out.println("STI: "+eachSTI);
-//            System.out.println("prop: "+eachSTI.getProportion());
-            if (eachSTI.getProportion() > threshold_rv) {
-
-                Centroid repP = new Centroid();
-                for (Point p : pointsInCell) {
-
-                    if (eachSTI.getInterval().isInInterval(p.getTime().getStartTime())) {
-                        //                System.out.println("Entrou");
-                        repP.addPoint(p);
-                    }
-                }
-                repP.setCellReference(presentCell);
-//                System.out.println("repP: "+repP.getPointListSource());
-//                if (!repP.getPointListSource().isEmpty() && repP.getPointListSource().size() >= threshold_rc) {
-
-                if (!repP.getPointListSource().isEmpty()) {
-                    repP.setSti(eachSTI);
-                    listRepPoint.add(repP);
-//                    System.out.println("RT: "+listRepPoint);
-                    //representativeTrajectory.addPoint(repP);
-                }
-            }
-        } //end loop in listSTI
-
-    }
-
-    public void defineRepPoints(ArrayList<Date> timeInPoints) {
-
-        List<STI> listSTI = new ArrayList<>();
-
-        //order times
-        Collections.sort(timeInPoints);
-//        System.out.println("Times: "+timeInPoints);
-        List<Integer> differences = new ArrayList<>(); //List of local time intervals
-
-//determine threshold by avg
-        int threshold = 100; //the predefined threshold used when the time value is less than or equal to 2 occurrences
-
-        //Begin -- Calculates the intervals of time
-        float sumDifferences = 0, sumDifferencesSD = 0;
-        for (int i = 1; i < timeInPoints.size(); i++) {
-            int auxDif = (int) TimeUnit.MINUTES.convert(timeInPoints.get(i).getTime() - timeInPoints.get(i - 1).getTime(), TimeUnit.MILLISECONDS);
-
-            if (auxDif > 0) {
-                differences.add(auxDif);
-                sumDifferences += differences.get(differences.size() - 1);
-            }
-        }
-
-        //Average temporal differences 
-        float avg = sumDifferences / differences.size();
-
-        System.out.println("Differences: " + differences);
-
-        if (differences.size() > 1) { //IF has more than 2 occurrences
-            //order temporal differences
-            Collections.sort(differences);
-            System.out.println("Differences: " + differences);
-            /*
-            compute the valid interval to remove the outliers
-             -- computation: valid interval median minus and plus (- / +) SD.
-             */
-            //1st - compute the median value of the difference values
-            if (differences.size() > 2) {
-                int med;
-                if (differences.size() % 2 == 1) {
-                    med = differences.get(Math.floorDiv(differences.size(), 2));
-                } else {
-                    med = (differences.get(differences.size() / 2 - 1) + differences.get((differences.size() / 2))) / 2;
-                }
-
-                //2nd - Compute the SD
-                for (int i = 0; i < differences.size(); i++) {
-                    sumDifferencesSD += Math.pow(((int) differences.get(i) - avg), 2);
-                }
-                float SD = sumDifferencesSD / differences.size();
-                SD = (float) Math.sqrt(SD);
-
-                //3rd - compute the valid interval (the value of median of temporal differences  minus and plus (- / +) SD)
-                float lessValue = med - SD;
-                float upperValue = med + SD;
-
-//                System.out.println("Valid differences: ["+lessValue+" |||| "+upperValue+"]");
-//                System.out.println("|differences| = "+differences.size());
-                //for removing outliers:
-                //remove values temporal differences less and upper the valid interval defined
-                for (int i = 0; i < differences.size(); i++) {
-                    if (differences.get(i) < lessValue) {
-                        sumDifferences -= (int) differences.get(i);
-                        differences.remove((Integer) differences.get(i));
-                        i--;
-                    } else {
-                        break;
-                    }
-                }
-
-                for (int i = differences.size() - 1; i >= 0; i--) {
-                    if (differences.get(i) > upperValue) {
-                        sumDifferences -= (int) differences.get(i);
-                        differences.remove((Integer) differences.get(i));
-                    } else {
-                        break;
-                    }
-                }
-//                
-                System.out.println("Dif 2: " + differences);
-                // update threshold value to average value of temporal differences considering only valid values
-                threshold = Math.floorDiv((int) sumDifferences, differences.size());
-            }
-        }
-        //End computation of temporal threshold
-
-        int cont = 1;
-//        Map<String, Integer> temporalRanking = new HashMap<>();
-        STI newSTI;
-        TemporalAspect aspTime = null;
-//        System.out.println("TAU Temp: "+threshold);
-        for (int i = 0; i < timeInPoints.size(); i++) {
-
-            /*
-            IF the occurrence is not the last, 
-            and two consecutive occurrences are considered a significant temporal interval (STI), 
-            considering the threshold value, then it is considered a new valid interval
-             */
-            if ((i != timeInPoints.size() - 1)
-                    && (TimeUnit.MINUTES.convert(timeInPoints.get(i).getTime(), TimeUnit.MILLISECONDS) + threshold)
-                    >= (TimeUnit.MINUTES.convert(timeInPoints.get(i + 1).getTime(), TimeUnit.MILLISECONDS))) {
-
-                try {
-                    aspTime.getStartTime();
-                } catch (NullPointerException e) {
-                    aspTime = new TemporalAspect(timeInPoints.get(i)); // if not exist the object, it is created
-                }
-                cont++;
-                /*
-                IF has only one occurrence, this is add in the rank list or 
-                if the occurence not is more considered into a previous STI 
-                 */
-            } else {
-
-                //try get start time value -- else not has the instance of object aspTime created, the NullPointer is apointed
-                try {
-                    aspTime.getStartTime();
-                    aspTime.setEndTime(timeInPoints.get(i)); // if exist the object, the end time value is setted
-//
-                } catch (NullPointerException e) {
-                    aspTime = new TemporalAspect(timeInPoints.get(i)); // if not exist the object, it is created
-                }
-
-                listSTI.add(new STI(aspTime, (float) cont / timeInPoints.size()));//add occurrence or STI into rank list
-                System.out.println("STI: " + aspTime + " points: " + cont + " times: " + timeInPoints.size());
-                //reset aux values
-                cont = 1;
-                aspTime = null;
-            }
-
-        }
-
-        // Ordernate temporal ranking 
-        listSTI.sort(Comparator.comparing(STI::getProportion).reversed()); // order (DESC) STI by proportion
 
         // based into valid interval, it is created the Representative points for further compute them
         for (STI eachSTI : listSTI) {
-
+            
 //            System.out.println("RV: "+threshold_rv);
 //            System.out.println("STI: "+eachSTI);
 //            System.out.println("prop: "+eachSTI.getProportion());
@@ -880,8 +719,8 @@ public class MATSG {
                 sdMinDist = (float) Math.sqrt(sdMinDist);
 
                 //3rd - compute the valid interval (the value of median of minimum distance minus and plus (- / +) SD)
-                float lessValueMinDist = medianMinDist - 4 * sdMinDist;
-                float upperValueMinDist = medianMinDist + 4 * sdMinDist;
+                float lessValueMinDist = medianMinDist - 4* sdMinDist;
+                float upperValueMinDist = medianMinDist + 4* sdMinDist;
 
                 //for removing outliers:
                 sumDistance = 0;
@@ -895,11 +734,12 @@ public class MATSG {
                 }
             }
             return (sumDistance / listMinDistances.size());
+        } 
+            return listMinDistances.get(0);
+
         }
-        return listMinDistances.get(0);
-
-    }
-
+        
+    
     public double computeSpatialThreshold() {
 
         double minDistance = 999999999999999999L;
@@ -924,13 +764,15 @@ public class MATSG {
         return (sumDistance / points.size());
 
     }
-
+    
+    
+    
     /**
-     * Writes the generated representative trajectory in a new .csv file
-     *
-     * @param fileOutput -- output file name
-     * @param ext -- Extension of the file (e.g. csv)
-     */
+         * Writes the generated representative trajectory in a new .csv file
+         *
+         * @param fileOutput -- output file name
+         * @param ext -- Extension of the file (e.g. csv)
+         */
     public void writeRepresentativeTrajectory(String fileOutput, String ext) {
         try {
 //            System.out.println(fileOutput + ext);
@@ -945,7 +787,7 @@ public class MATSG {
             mxWriter.writeLine("#");
             mxWriter.writeLine("RT setting infos:");
             mxWriter.writeLine("|input.T|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue");
-            System.out.println("|T| = " + listTrajectories.size());
+            System.out.println("|T| = "+listTrajectories.size());
 //            for(MultipleAspectTrajectory mT: listTrajectories){
 //                System.out.println(mT);
 //            }
@@ -954,50 +796,7 @@ public class MATSG {
             mxWriter.writeLine("RT infos:");
             mxWriter.writeLine("|rt|");
             mxWriter.writeLine(representativeTrajectory.getPointList().size());
-
-            mxWriter.flush();
-
-            mxWriter.close();
-        } catch (IOException e) {
-//					Logger.log(Type.ERROR, pfx + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    public void writeInfosRT(String fileName, String ext) {
-        File fileInfos = null;
-        CSVWriter mxWriter = null;
-        try {
-            fileInfos = new File("datasets/" + fileName + ext);
-            if (fileInfos.exists() == true) {
-                mxWriter = new CSVWriter("datasets/" + fileName + ext, true);
-
-            } else {
-                mxWriter = new CSVWriter("datasets/" + fileName + ext);
-                mxWriter.writeLine("Info input dataset:");
-                mxWriter.writeLine("|input.T|, |input.T.points|");
-                mxWriter.writeLine(listTrajectories.size() + ", " + points.size());
-                mxWriter.writeLine("##");
-                mxWriter.writeLine("RT setting infos:");
-                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue");
-
-            }
-            LineNumberReader readingLine = new LineNumberReader(new FileReader(fileInfos));
-            readingLine.skip(fileInfos.length());
-            if(readingLine.getLineNumber() < 6){
-                mxWriter = new CSVWriter("datasets/" + fileName + ext);
-                mxWriter.writeLine("Info input dataset:");
-                mxWriter.writeLine("|input.T|, |input.T.points|");
-                mxWriter.writeLine(listTrajectories.size() + ", " + points.size());
-                mxWriter.writeLine("##");
-                mxWriter.writeLine("RT setting infos:");
-                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue");
-
-            }
             
-//            if(fileInfos.list().length)
-            mxWriter.writeLine(this.valueZ + ", " + representativeTrajectory.getPointList().size() + ", " + cellSizeSpace + ", " + rc + ", " + threshold_rc + ", " + threshold_rv);
-
             mxWriter.flush();
 
             mxWriter.close();

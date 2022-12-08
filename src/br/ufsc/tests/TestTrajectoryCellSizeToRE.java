@@ -9,9 +9,7 @@ package br.ufsc.tests;
 
 
 import br.ufsc.methods.MATSG;
-import static br.ufsc.tests.TestTrajectoryCellSize.dir;
-import static br.ufsc.tests.TestTrajectoryCellSize.extension;
-import static br.ufsc.tests.TestTrajectoryCellSize.filename;
+import br.ufsc.methods.MATSG_RE;
 import java.io.IOException;
 import java.text.ParseException;
 
@@ -27,8 +25,8 @@ public class TestTrajectoryCellSizeToRE {
 
     public static void main(String[] args) throws IOException, ParseException {
 
-        dir = "datasets\\";
-        filename = "Running_Example_v2";
+        dir = "datasets\\RE\\";
+        filename = "Running_Example_v5";
         extension = ".csv";
 
 
@@ -42,10 +40,10 @@ public class TestTrajectoryCellSizeToRE {
         String SEPARATOR = ",";
         String[] valuesNulls = {"Unknown", "*-1"};
         
-        int thresholdCellSize = 6;
-//        method.execute(dir,filename, extension, lstCategoricalsPreDefined, SEPARATOR, valuesNulls,thresholdCellSize);
+        int thresholdCellSize = 12;
+//        int thresholdCellSize = Integer.parseInt(args[0]);
         float rc = 0.1f;
-        float threshold_rv = 0.25f;
+        float threshold_rv = 0.24f;
 
         method.execute(dir, filename, extension, lstCategoricalsPreDefined, SEPARATOR, valuesNulls, thresholdCellSize, rc, threshold_rv);
     }

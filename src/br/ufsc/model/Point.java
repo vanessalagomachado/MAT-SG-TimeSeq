@@ -27,7 +27,7 @@ public class Point {
     protected double y;
     protected List<AttributeValue> listAttrValues;
     private TemporalAspect time;
-    
+    protected String cellReference;
     public static SimpleDateFormat formatDate = new SimpleDateFormat("HH:mm");
     
     
@@ -166,7 +166,8 @@ public class Point {
 
         txt += "\n(x,y)= (" + formatNumber.format(x) + "," + formatNumber.format(y) + "), ";
         if (time != null) {
-            txt += "\nTIME: " + formatDate.format(time) + ", ";
+//            txt += "\nTIME: " + formatDate.format(time) + ", ";
+            txt += "\nTemporal Aspect: " + time + ", ";
         }
         if (!listAttrValues.isEmpty() ) {
             txt += showAttrValues();
@@ -320,5 +321,15 @@ public class Point {
         }
         return true;
     }
+
+    public String getCellReference() {
+        return cellReference;
+    }
+
+    public void setCellReference(String cellReference) {
+        this.cellReference = cellReference;
+    }
+    
+    
     
 }

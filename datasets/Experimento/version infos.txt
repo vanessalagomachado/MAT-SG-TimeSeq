@@ -1,0 +1,31 @@
+[A2] -- filter by direction => 'mall to airport' and route => 101
+
+v1 -> 
+rc -- all elements - tau = 0
+rv -- all values - tau = 0
+ -- bugs: all numeric values defined as numeric, including "taxi_id" ... and other categorical values
+
+v2 ->
+last bug corrected
+rc -- more than 5% of points - tau = 0.005
+
+v3 ->
+        float rc = 0.005f;
+        float threshold_rv = 0.0f;
+	bug Time corrigido -> Time estava considerando apenas as horas do dia, e não o dia... 
+
+v4 ->
+	        float rc = 0.01f;
+	        float threshold_rv = 0.0f;
+
+v5 ->
+		float rc = 0.01f;
+	        float threshold_rv = 0.05f;
+
+v6 ->
+		float rc = 0.01f;
+	        float threshold_rv = 0.1f;
+
+v7 -> 
+		float rc = 0.015f;
+	        float threshold_rv = 0.0f;

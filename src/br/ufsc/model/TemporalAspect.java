@@ -61,7 +61,7 @@ public class TemporalAspect {
 
     @Override
     public String toString() {
-        return formatTime.format(startTime) +" - "+ (endTime != null? formatTime.format(endTime):"");
+        return formatDate.format(startTime) +" - "+ (endTime != null? formatDate.format(endTime):"");
     }
 
     public boolean isInInterval(Date time){
