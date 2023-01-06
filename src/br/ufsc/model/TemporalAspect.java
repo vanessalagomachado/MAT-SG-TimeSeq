@@ -64,6 +64,11 @@ public class TemporalAspect {
         return formatDate.format(startTime) +" - "+ (endTime != null? formatDate.format(endTime):"");
     }
 
+    /**
+     * Analyse if the time is contained in this interval
+     * @param time
+     * @return 
+     */
     public boolean isInInterval(Date time){
         Calendar start = Calendar.getInstance();
              start.set(Calendar.HOUR_OF_DAY, startTime.getHours());

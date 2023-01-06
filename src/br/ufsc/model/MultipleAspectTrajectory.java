@@ -17,6 +17,7 @@ public class MultipleAspectTrajectory {
     private String description;
     private int id;
     private List<Point> pointList;
+    private int coverPoints;
 
     public MultipleAspectTrajectory(String description, int id) {
         this.description = description;
@@ -63,6 +64,18 @@ public class MultipleAspectTrajectory {
     
     public Point getLastPoint(){
         return pointList.get(pointList.size()-1);
+    }
+
+    public int getCoverPoints() {
+        return coverPoints;
+    }
+
+    public void setCoverPoints(int coverPoints) {
+        this.coverPoints = coverPoints;
+    }
+    
+    public void incrementValue(int value){
+        this.coverPoints+=value;
     }
 
     @Override

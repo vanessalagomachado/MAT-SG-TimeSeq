@@ -30,21 +30,21 @@ public class TestTrajectoryCellSizeToRE {
         extension = ".csv";
 
 
-        MATSG method = new MATSG();
-        
-        //informando lista de att a ser forçados como categoricos, mesmo contendo números
-        String[] lstCategoricalsPreDefined = {"PRICE"};
-        //
-         String[] lstToIgnore = {"label".toUpperCase()};
+//        MATSG method = new MATSG();
+//        
+//        //informando lista de att a ser forçados como categoricos, mesmo contendo números
+//        String[] lstCategoricalsPreDefined = {"PRICE"};
+//        //
+//         String[] lstToIgnore = {"label".toUpperCase()};
+//
+//        String SEPARATOR = ",";
+//        String[] valuesNulls = {"Unknown", "*-1"};
+//        
+//        int thresholdCellSize = 12;
+////        int thresholdCellSize = Integer.parseInt(args[0]);
+//        float rc = 0.1f;
+//        float threshold_rv = 0.24f;
 
-        String SEPARATOR = ",";
-        String[] valuesNulls = {"Unknown", "*-1"};
-        
-        int thresholdCellSize = 12;
-//        int thresholdCellSize = Integer.parseInt(args[0]);
-        float rc = 0.1f;
-        float threshold_rv = 0.24f;
-
-        method.execute(dir, filename, extension, lstCategoricalsPreDefined, SEPARATOR, valuesNulls, thresholdCellSize, rc, threshold_rv);
+//        method.execute(dir, filename, extension, lstCategoricalsPreDefined, SEPARATOR, valuesNulls, thresholdCellSize, rc, threshold_rv);
     }
 }
