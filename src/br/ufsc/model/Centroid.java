@@ -94,10 +94,17 @@ public class Centroid extends Point implements Comparable{
 
 //    @Override
     public String toString() {
-        String aux = super.toString();
+        Locale.setDefault(Locale.US);
+        DecimalFormat formatNumber = new DecimalFormat("##.##");
+        String aux = ("rt");
+
+        aux += "\n(x,y)= (" + formatNumber.format(x) + "," + formatNumber.format(y) + "), ";
 //        if(!listSTI.isEmpty()){
 //            aux += "\nTime: "+listSTI;
 //        }
+        if (!listAttrValues.isEmpty() ) {
+            aux += showAttrValues();
+        }
         if(getSti()!=null){
             aux += "\nTime: "+sti;
         }

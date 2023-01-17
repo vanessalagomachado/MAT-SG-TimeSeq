@@ -40,18 +40,18 @@ import measure.SimilarityMeasure;
  * @author vanes
  */
 public class MATSG {
+    
 
     // setting to execute method
     String SEPARATOR;
     String[] valuesNulls;
     // --------------------- AUX ----------------------
-    private static List<int[]> trajectories;
+    //private static List<int[]> trajectories;
     private static int rId;
     private static int cId;
     int ord;
     private static String auxTid;
-//    private static SimpleDateFormat formatDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-    private static SimpleDateFormat formatDate = new SimpleDateFormat("yyyy-MM-dd");
+    private static SimpleDateFormat formatDate;
 //    private static DecimalFormat df = new DecimalFormat("###.######");
 
     // -- Load
@@ -101,6 +101,9 @@ public class MATSG {
 
     //aux to know the cell of each rp
     private String presentCell;
+    
+    //to use on analysis of better RT generated (better spatial threshold)
+    private int avgP;
 
     /**
      * Method to perform all methods in order to summarize input MATs into a
@@ -112,7 +115,7 @@ public class MATSG {
      *
      */
 //    public void execute(String dir, String file, String ext, String[] lstCategoricalPD, String SEPARATOR, String[] valuesNULL, int numberSpatialDistance, float rc, float threshold_rv) throws IOException, ParseException {
-    public void execute(String dir, String file, String ext, String[] lstCategoricalPD, String SEPARATOR, String[] valuesNULL, float rc, float threshold_rv) throws IOException, ParseException {
+    public void execute(String dir, String file, String ext, String[] lstCategoricalPD, String SEPARATOR, String[] valuesNULL, String patternDate, float rc, float threshold_rv) throws IOException, ParseException {
 
         //initialization of attribute values (Global attributes according to local data)
         directory = dir;
@@ -120,6 +123,10 @@ public class MATSG {
         extension = ext;
         this.SEPARATOR = SEPARATOR;
         this.valuesNulls = valuesNULL;
+        
+        if(!patternDate.equals("?"))
+            this.formatDate = new SimpleDateFormat(patternDate);
+        
 //        this.valueZ = numberSpatialDistance;
 
         //initialization of aux attributes
@@ -153,20 +160,44 @@ public class MATSG {
         System.out.println("|input.T|: " + listTrajectories.size());
         System.out.println("|input.T.points| = " + points.size());
 
+        
+        //compute the point avg of input Trajectories
+//        List<Integer> listSizeT = new ArrayList<>();
+//        for(MultipleAspectTrajectory eachT: listTrajectories){
+//            avgP += eachT.getPointList().size();
+//            listSizeT.add(eachT.getPointList().size());
+//        }
+        
+        System.out.println("Point AVG of input Trajectories: ");
+//        System.out.println("Calculed: "+(avgP/listTrajectories.size()));
+        System.out.println("Using stored values: "+points.size()/listTrajectories.size());
+        
+//        Collections.sort(listSizeT);
+//        int medianSizeP = listSizeT.size()%2==0?(listSizeT.get(listSizeT.size()/2-1)+listSizeT.get(listSizeT.size())/2):listSizeT.get(listSizeT.size()/2);
+//        System.out.println("median size of input Trajectories points: ");
+//        System.out.println("Size of points of input T: "+listSizeT);
+//        System.out.println("Calculed: "+medianSizeP);
+        
         // Vanessa - Calcular automação da célula
         // Vanessa - Calcular área máxima da parte espacial (maior célula possível)
         // Calculates the spatial threshold according with the Z value and point dispersion
         computeSpatialThresholdOutliers();
-
-        float tempMaxZ = auxMaxZ, tempMinZ = 1, tempBetterZ = -1, tempBetterRM = 0;
-        float tempZ25, tempZ75, tempRM25Z, tempRM75Z;
+        System.out.println("Z max: "+auxMaxZ);
+        int tempMaxZ = (int)auxMaxZ, tempMinZ = 0, tempBetterZ = -1; 
+        float tempBetterRM = 0, quartile, tempRM25Z, tempRM75Z;
+        int tempZ25, tempZ75;
         while (true) {
-            tempZ25 = (tempMaxZ - tempMinZ) / 4;
-            tempZ75 = tempMinZ + (tempZ25 *3);
-            tempZ25 = tempMinZ + tempZ25;
+            quartile = (float)(tempMaxZ - tempMinZ) / 4;
+            tempZ75 = (int) (tempMaxZ - quartile);
+            tempZ25 = (int)(tempMinZ + quartile);
+            System.out.println("["+tempMinZ+" -- "+tempMaxZ+"] -- Q: "+quartile);
+            System.out.println("Z-25: "+tempZ25+" | Z-75: "+tempZ75);
             
+            
+            resetValuesRT();
             compute25p:
             {
+                System.out.println("... computing Z-25:");
                 cellSizeSpace = (spatialThreshold * tempZ25) * 0.7071; // Calcultes size of the cells
 
                 allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
@@ -188,6 +219,7 @@ public class MATSG {
             resetValuesRT();
             compute75p:
             {
+                System.out.println("... computing Z-75:");
                 cellSizeSpace = (spatialThreshold * tempZ75) * 0.7071; // Calcultes size of the cells
 
                 allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
@@ -204,20 +236,25 @@ public class MATSG {
                     writeRepresentativeTrajectory("..\\" + directory + "result\\" + filename + "[output] - z" + tempZ75, ext);
                 }
                 writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempZ75, tempRM75Z, false);
-
+                
             }
             
             if(tempRM25Z >= tempRM75Z && 
                     tempRM25Z >= tempBetterRM){
                 tempBetterRM = tempRM25Z;
-                tempBetterZ = tempZ25;
-                tempMaxZ /= 2;
-            } else if(tempRM75Z >= tempRM25Z && 
+                tempBetterZ = (int) tempZ25;
+                tempMaxZ -= (quartile * 2);
+            } else if(tempRM75Z > tempRM25Z && 
                     tempRM75Z >= tempBetterRM){
                 tempBetterRM = tempRM75Z;
-                tempBetterZ = tempZ75;
-                tempMinZ /= 2;
+                tempBetterZ = (int) tempZ75;
+                tempMinZ += (quartile * 2);
             } else {
+                writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempBetterZ, tempBetterRM, true);
+                break;
+            }
+            
+            if(tempMaxZ == tempMinZ){
                 writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempBetterZ, tempBetterRM, true);
                 break;
             }
@@ -296,8 +333,10 @@ public class MATSG {
         //All trajectory point follow the pattern:
         //id trajectory, coordinates (lat long), time, all semantic dimensions...
         // Follow the pattern add each MAT point in relative MAT
-        addTrajectoryData(attrValues[0], attrValues[1].split(" "), formatDate.parse(attrValues[2]), semantics);
-//        addTrajectoryData(attrValues[0], attrValues[1].split(" "), Util.convertMinutesToDate(Integer.parseInt(attrValues[2])), semantics);
+        if(formatDate != null)
+            addTrajectoryData(attrValues[0], attrValues[1].split(" "), formatDate.parse(attrValues[2]), semantics);
+        else
+            addTrajectoryData(attrValues[0], attrValues[1].split(" "), Util.convertMinutesToDate(Integer.parseInt(attrValues[2])), semantics);
 
     }
 
@@ -692,7 +731,7 @@ public class MATSG {
                 }
 
                 listSTI.add(new STI(aspTime, (float) cont / timeInPoints.size()));//add occurrence or STI into rank list
-                System.out.println("STI: " + aspTime + " points: " + cont + " times: " + timeInPoints.size());
+//                System.out.println("STI: " + aspTime + " points: " + cont + " times: " + timeInPoints.size());
                 //reset aux values
                 cont = 1;
                 aspTime = null;
