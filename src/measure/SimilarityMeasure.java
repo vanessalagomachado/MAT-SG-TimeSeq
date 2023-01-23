@@ -35,20 +35,7 @@ public class SimilarityMeasure {
         this.weights = new HashMap<Object, Float>();
         this.thresholds = new HashMap<SemanticAspect, Float>();
     }
-    
-//    public SimilarityMeasure(String formatTemporalData) {
-//        this.weights = new HashMap<Object, Double>();
-//        this.thresholds = new HashMap<SemanticAspect, Double>();
-//        patternTemporalData = formatTemporalData;
-//        
-//    }
-//    
-//    public SimilarityMeasure(SimpleDateFormat formatTemporalData) {
-//        this.weights = new HashMap<Object, Double>();
-//        this.thresholds = new HashMap<SemanticAspect, Double>();
-//        
-//        
-//    }
+
 
     public void clear() {
         this.weights.clear();
@@ -188,27 +175,15 @@ public class SimilarityMeasure {
         if(atv == null || rep == null)
             return 0;
 
-        // compute temporal match 
-//        if (!rep.getAttibute().getName().equalsIgnoreCase("TIME")
-//                && rep.getAttibute().equals(atv.getAttibute())) {
-//            if (rep.getValue() instanceof Number) {
-//                //Case of Semantic - numeric
-//                if (getThreshold(rep.getAttibute()) >= Math.abs(Double.valueOf(rep.getValue().toString()) - Double.valueOf(atv.getValue().toString()))) {
-//                    match = 1;
-//                }
-//            } else 
+
                 if (rep.getValue() instanceof Map) {
 //                    System.out.println("Entrou MAP");
                 // case of semantic - categorical
                 HashMap<String, Double> valuesRT = (HashMap) rep.getValue();
-//                    System.out.println(valuesRT);
-//                    System.out.println("valor na T: "+((String) atv.getValue()).toUpperCase());
                 if (valuesRT.containsKey(((String) atv.getValue()).toUpperCase())) {
-//                    System.out.println("Achou a chave");
                     match = valuesRT.get(((String) atv.getValue()).toUpperCase());
                 }
             }
-//        }
 
         return match * getWeight(rep.getAttibute());
     }

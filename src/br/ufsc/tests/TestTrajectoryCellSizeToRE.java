@@ -9,10 +9,9 @@ package br.ufsc.tests;
 
 
 import br.ufsc.methods.MATSG;
-import br.ufsc.methods.MATSG_RE;
-import static br.ufsc.tests.RunExperimentHermopolis.dir;
-import static br.ufsc.tests.RunExperimentHermopolis.extension;
-import static br.ufsc.tests.RunExperimentHermopolis.filename;
+import br.ufsc.methods.MATSG_C;
+import br.ufsc.methods.MATSG_D;
+import br.ufsc.methods.MATSG_E;
 import java.io.IOException;
 import java.text.ParseException;
 
@@ -32,9 +31,17 @@ public class TestTrajectoryCellSizeToRE {
         filename = "Running_Example_v5";
         extension = ".csv";
 
-
-        MATSG method = new MATSG();
+        //method A & B
+       // MATSG method = new MATSG();
         
+        //method C
+//        MATSG_C method = new MATSG_C();
+
+        //method D
+//        MATSG_D method = new MATSG_D();
+
+        //method E
+        MATSG_E method = new MATSG_E();
         
         //informando lista de att a ser forçados como categoricos, mesmo contendo números
         String[] lstCategoricalsPreDefined = {"price"};

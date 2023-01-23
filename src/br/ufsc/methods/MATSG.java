@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import measure.MUITAS;
 import measure.SimilarityMeasure;
 
 /**
@@ -103,8 +104,13 @@ public class MATSG {
     private String presentCell;
     
     //to use on analysis of better RT generated (better spatial threshold)
-    private int avgP;
+//    private int avgP;
 
+    
+    //for use for analysis of point cover point by RT
+    private int coverPoints;
+    
+    
     /**
      * Method to perform all methods in order to summarize input MATs into a
      * representative MAT.
@@ -162,21 +168,11 @@ public class MATSG {
 
         
         //compute the point avg of input Trajectories
-//        List<Integer> listSizeT = new ArrayList<>();
-//        for(MultipleAspectTrajectory eachT: listTrajectories){
-//            avgP += eachT.getPointList().size();
-//            listSizeT.add(eachT.getPointList().size());
-//        }
-        
+       
         System.out.println("Point AVG of input Trajectories: ");
-//        System.out.println("Calculed: "+(avgP/listTrajectories.size()));
         System.out.println("Using stored values: "+points.size()/listTrajectories.size());
         
-//        Collections.sort(listSizeT);
-//        int medianSizeP = listSizeT.size()%2==0?(listSizeT.get(listSizeT.size()/2-1)+listSizeT.get(listSizeT.size())/2):listSizeT.get(listSizeT.size()/2);
-//        System.out.println("median size of input Trajectories points: ");
-//        System.out.println("Size of points of input T: "+listSizeT);
-//        System.out.println("Calculed: "+medianSizeP);
+
         
         // Vanessa - Calcular automação da célula
         // Vanessa - Calcular área máxima da parte espacial (maior célula possível)
@@ -184,19 +180,26 @@ public class MATSG {
         computeSpatialThresholdOutliers();
         System.out.println("Z max: "+auxMaxZ);
         int tempMaxZ = (int)auxMaxZ, tempMinZ = 0, tempBetterZ = -1; 
-        float tempBetterRM = 0, quartile, tempRM25Z, tempRM75Z;
+        float tempBetterRM = 0, quartile, tempRM25Z = 0, tempRM75Z = 0;
         int tempZ25, tempZ75;
+        ArrayList<Integer> computedValues = new ArrayList<>();
+        
+        
         while (true) {
+            tempRM25Z = 0;
+            tempRM75Z = 0;
             quartile = (float)(tempMaxZ - tempMinZ) / 4;
-            tempZ75 = (int) (tempMaxZ - quartile);
-            tempZ25 = (int)(tempMinZ + quartile);
+            tempZ75 = Math.round(tempMaxZ - quartile);
+            tempZ25 = Math.round(tempMinZ + quartile);
             System.out.println("["+tempMinZ+" -- "+tempMaxZ+"] -- Q: "+quartile);
             System.out.println("Z-25: "+tempZ25+" | Z-75: "+tempZ75);
             
-            
+            if(!computedValues.contains(tempZ25)){
             resetValuesRT();
+            computedValues.add(tempZ25);
             compute25p:
             {
+                
                 System.out.println("... computing Z-25:");
                 cellSizeSpace = (spatialThreshold * tempZ25) * 0.7071; // Calcultes size of the cells
 
@@ -216,7 +219,12 @@ public class MATSG {
                 writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempZ25, tempRM25Z, false);
 
             }
+            }
+            
+            if(!computedValues.contains(tempZ75)){
+                
             resetValuesRT();
+            computedValues.add(tempZ75);
             compute75p:
             {
                 System.out.println("... computing Z-75:");
@@ -237,6 +245,7 @@ public class MATSG {
                 }
                 writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempZ75, tempRM75Z, false);
                 
+            }
             }
             
             if(tempRM25Z >= tempRM75Z && 
@@ -476,12 +485,15 @@ public class MATSG {
 
         // Ordernate temporal ranking 
         listRepPoint = listRepPoint.stream().sorted().collect(Collectors.toList());
-
+        coverPoints = 0;
 //        System.out.println("Lista RP: " + listRepPoint);
         for (Centroid representativePoint : listRepPoint) {
             resetValuesToSummarization();
             representativeTrajectory.addPoint(representativePoint);
-
+            
+            coverPoints += representativePoint.getPointListSource().size();
+            
+            
             for (Point p : representativePoint.getPointListSource()) {
                 // Spatial data
                 avgX += p.getX();
@@ -857,7 +869,6 @@ public class MATSG {
                     }
 
                 }
-//                System.out.println("Lista dist: "+listMinDistances);
             }
 
             spatialThreshold = (sumDistance / listMinDistances.size());
@@ -879,8 +890,6 @@ public class MATSG {
      */
     public void writeRepresentativeTrajectory(String fileOutput, String ext) {
         try {
-//            System.out.println(fileOutput + ext);
-//            System.out.println("...");
             CSVWriter mxWriter = new CSVWriter("datasets/" + fileOutput + ext);
 
             for (Point p : representativeTrajectory.getPointList()) {
@@ -928,7 +937,7 @@ public class MATSG {
                 mxWriter.writeLine(listTrajectories.size() + ", " + points.size());
                 mxWriter.writeLine("##");
                 mxWriter.writeLine("RT setting infos:");
-                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue, |cell|, RepresentativenessMeasure, timestamp");
+                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue, |cell|, RepresentativenessMeasure, |cover RT|, timestamp");
 
             }
             LineNumberReader readingLine = new LineNumberReader(new FileReader(fileInfos));
@@ -941,7 +950,7 @@ public class MATSG {
                 mxWriter.writeLine(listTrajectories.size() + ", " + points.size());
                 mxWriter.writeLine("##");
                 mxWriter.writeLine("RT setting infos:");
-                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue, |cell|, RepresentativenessMeasure, timestamp");
+                mxWriter.writeLine("thresholdCellSize, |rt|, CellSize, tauRelevantCell, minPointsRC, tauRepresentativenessValue, |cell|, RepresentativenessMeasure, |cover RT|, timestamp");
 
             }
 //            System.out.println("Z max: " + auxMaxZ);
@@ -950,7 +959,8 @@ public class MATSG {
                     + representativeTrajectory.getPointList().size() + ", " 
                     + cellSizeSpace + ", " + rc + ", " 
                     + threshold_rc + ", " + threshold_rv + ", " 
-                    + spatialCellGrid.size()+", "+representativenessMeasure+", "+new Date());
+                    + spatialCellGrid.size()+", "+representativenessMeasure+", "
+                    +coverPoints+", "+new Date());
 
             } else if(fim == true){
                 mxWriter.writeLine("##");
@@ -1041,8 +1051,14 @@ public class MATSG {
         }
 
         //mxWriter.writeLine("|cover rt| = "+coverPoints);
+        
+        
         SimilarityMeasure measure = new SimilarityMeasure();
-        //Compute thresholds
+//        MUITAS measure = new MUITAS();
+        
+
+
+//Compute thresholds
         //3D with equal weight (0.33) e totalizando 1.0
 
         measure.setWeight("SPATIAL", 0.34f);
@@ -1072,7 +1088,13 @@ public class MATSG {
         List<Double> listValues = new ArrayList<>();
 
         for (MultipleAspectTrajectory eachTraj : listTrajectories) {
+            //for use Recall by SimilarityMeasure
             listValues.add(measure.recallOf(representativeTrajectory, eachTraj));
+
+            //for use MUITAS
+//            listValues.add(measure.similarityOf(representativeTrajectory, eachTraj));
+            
+            
             repMeasure += listValues.get(listValues.size() - 1);
 
         }
@@ -1088,108 +1110,6 @@ public class MATSG {
 
 //        System.out.println("Representative Measure (median) = " + (repMeasure * 100) + "%");
         return repMeasure;
-
-    }
-
-// bkp
-    public double computeSpatialThresholdOutliers_bkp01() {
-        float maxDistanceToZero = 0;
-//        float minDistanceToZero = 999999999999999999L;
-
-//        float minX=0, minY=0, maxX=0, maxY=0;
-        float auxValueZ;
-
-        float minDistance = 999999999999999999L;
-        float localDistance;
-        float sumDistance = 0;
-        ArrayList<Float> listMinDistances = new ArrayList<>();
-//        double avgDistance;
-        for (Point p : points) {
-            auxValueZ = Util.euclideanDistanceToZero(p);
-//            System.out.println("Distance to Zero: "+auxValueZ);
-//            if(auxValueZ < minDistanceToZero){
-//            
-//                minDistanceToZero = auxValueZ;
-////                minX = (float)p.getX();
-////                minY = (float)p.getY();
-//                
-//            } 
-            if (auxValueZ > maxDistanceToZero) {
-                maxDistanceToZero = auxValueZ;
-//                maxX = (float) p.getX();
-//                maxY = (float) p.getY();
-            }
-
-            for (Point q : points) {
-                if (!p.equals(q)) {
-                    localDistance = (float) Util.euclideanDistance(p, q);
-                    if (localDistance < minDistance) {
-                        minDistance = localDistance;
-                    }
-                }
-            }
-            sumDistance += minDistance;
-            listMinDistances.add(minDistance);
-            minDistance = 999999999999999999L;
-            localDistance = 0;
-
-        }
-
-        float avgMinDist = (sumDistance / points.size());
-        sumDistance = 0;
-
-        // Remove outliers of minimun spatial distance
-        if (listMinDistances.size() > 1) { //IF has more than 2 occurrences
-            //order minimun spatial distance
-            Collections.sort(listMinDistances);
-            //-- computation: valid interval median minus and plus (- / +) SD.
-
-            //1st - compute the median value of the difference values
-            if (listMinDistances.size() > 2) {
-                float medianMinDist;
-                if (listMinDistances.size() % 2 == 1) {
-                    medianMinDist = listMinDistances.get(Math.floorDiv(listMinDistances.size(), 2));
-                } else {
-                    medianMinDist = (listMinDistances.get(listMinDistances.size() / 2 - 1) + listMinDistances.get((listMinDistances.size() / 2))) / 2;
-                }
-
-                //2nd - Compute the SD
-                for (int i = 0; i < listMinDistances.size(); i++) {
-                    sumDistance += Math.pow((listMinDistances.get(i) - avgMinDist), 2);
-                }
-                float sdMinDist = sumDistance / listMinDistances.size();
-                sdMinDist = (float) Math.sqrt(sdMinDist);
-
-                //3rd - compute the valid interval (the value of median of minimum distance minus and plus (- / +) SD)
-                float lessValueMinDist = medianMinDist - 4 * sdMinDist;
-                float upperValueMinDist = medianMinDist + 4 * sdMinDist;
-
-//                System.out.println("Limit distances: ["+lessValueMinDist+", "+upperValueMinDist+"]");
-                //for removing outliers:
-                sumDistance = 0;
-                //remove values temporal differences less and upper the valid interval defined
-                for (int i = 0; i < listMinDistances.size(); i++) {
-                    if (listMinDistances.get(i) < lessValueMinDist || listMinDistances.get(i) > upperValueMinDist
-                            || listMinDistances.get(i) == 0.0) {
-                        listMinDistances.remove(i);
-                    } else {
-                        sumDistance += listMinDistances.get(i);
-                    }
-
-                }
-//                System.out.println("Lista dist: "+listMinDistances);
-            }
-//            auxMaxZ =   (float)((maxDistanceToZero - minDistanceToZero) / (sumDistance / listMinDistances.size()));
-            float tempDisp = (float) (sumDistance / listMinDistances.size());
-            System.out.println("Sum dist: " + sumDistance + " || qnt dist: " + listMinDistances.size());
-
-            auxMaxZ = maxDistanceToZero / tempDisp;
-            System.out.println("Dist max: " + maxDistanceToZero + " || min dispersion: " + tempDisp + "|| Z max: " + auxMaxZ);
-
-            return (sumDistance / listMinDistances.size());
-        }
-
-        return listMinDistances.get(0);
 
     }
 
