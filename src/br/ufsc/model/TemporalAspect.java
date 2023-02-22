@@ -15,10 +15,12 @@ import java.util.Objects;
  * @author vanes
  */
 public class TemporalAspect {
+    
     private Date startTime;
     private Date endTime;
-    SimpleDateFormat formatDate = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-    SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm");
+    SimpleDateFormat formatDate = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    SimpleDateFormat formatTime = new SimpleDateFormat("HH:mm:ss");
+    private boolean dailyInfo;
 
     public TemporalAspect(){}
      
@@ -34,6 +36,7 @@ public class TemporalAspect {
     
     public TemporalAspect(int startTimeMinutes) {
         this.startTime = Util.convertMinutesToDate(startTimeMinutes);
+        setDailyInfo(true);
     }
 
     public Date getStartTime() {
@@ -134,6 +137,16 @@ public class TemporalAspect {
             return false;
         }
         return true;
+    }
+
+    public boolean isDailyInfo() {
+        return dailyInfo;
+    }
+
+    public void setDailyInfo(boolean dailyInfo) {
+        if(dailyInfo == true)
+            formatDate = new SimpleDateFormat("HH:mm");
+        this.dailyInfo = dailyInfo;
     }
     
     

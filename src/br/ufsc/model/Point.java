@@ -21,14 +21,14 @@ import java.util.Objects;
  */
 public class Point {
 
-    private MultipleAspectTrajectory trajectory;
-    private int rId;
+    protected MultipleAspectTrajectory trajectory;
+    protected int rId;
     protected double x;
     protected double y;
     protected List<AttributeValue> listAttrValues;
-    private TemporalAspect time;
+    protected TemporalAspect time;
     protected String cellReference;
-    public static SimpleDateFormat formatDate = new SimpleDateFormat("HH:mm");
+//    public static SimpleDateFormat formatDate = new SimpleDateFormat("HH:mm");
     
     
 
@@ -226,6 +226,11 @@ public class Point {
     
     public void addAttrValue(Object value, SemanticAspect attr) {
         listAttrValues.add(new AttributeValue(value, attr));
+    }
+    
+        
+    public void addAttrValue(Object value, SemanticAspect attr, double numValueSD) {
+        listAttrValues.add(new AttributeValue(value, attr, numValueSD));
     }
 
     public String showAttrValues() {

@@ -165,14 +165,22 @@ public class MUITAS {
         if(atv == null || rep == null)
             return 0;
 
+//                System.out.println("Value of attr value on compute match: "+rep.getValue());
+                if (rep.getValue() instanceof Map) { // Categorical values
 
-                if (rep.getValue() instanceof Map) {
-//                    System.out.println("Entrou MAP");
                 // case of semantic - categorical
                 HashMap<String, Double> valuesRT = (HashMap) rep.getValue();
                 if (valuesRT.containsKey(((String) atv.getValue()).toUpperCase())) {
                     match = valuesRT.get(((String) atv.getValue()).toUpperCase());
                 }
+            } else {
+                
+                if(rep.getNumericalValueSD() != 0)
+                    match = Math.abs(Double.parseDouble((String)rep.getValue()) - Double.parseDouble((String)atv.getValue())) <= (rep.getNumericalValueSD() * 2.5) ? 1.0 : 0;
+                else //default value
+                    match = Math.abs(Double.parseDouble((String)rep.getValue()) - Double.parseDouble((String)atv.getValue())) <= 10 ? 1.0 : 0;
+//                
+                System.out.println("Numerical value: "+atv.getValue()+" -- RT value: "+rep.getValue()+" --Threshold value:  "+rep.getNumericalValueSD()*2.5+" -- Match value: "+match);
             }
 
         return match * getWeight(rep.getAttibute());

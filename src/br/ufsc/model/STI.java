@@ -13,18 +13,22 @@ import java.util.Objects;
  * @author vanes
  */
 public class STI {
+    private Point point;
     private TemporalAspect interval;
     private float proportion;
 
     public STI(TemporalAspect interval, float proportion) {
+//        this.point = point;
         this.interval = interval;
         this.proportion = proportion;
     }
-    public STI(Date startTime, float proportion) {
+    public STI(Date startTime, float proportion, Point point) {
+        this.point = point;
         this.interval = new TemporalAspect(startTime);
         this.proportion = proportion;
     }
-    public STI(Date startTime, Date endTime, float proportion) {
+    public STI(Date startTime, Date endTime, float proportion, Point point) {
+        this.point = point;
         this.interval = new TemporalAspect(startTime, endTime);
         this.proportion = proportion;
     }
@@ -76,7 +80,18 @@ public class STI {
 
     @Override
     public String toString() {
-        return interval + " > "+proportion;
+        if(point.getTrajectory().isDailyInfo())
+            interval.setDailyInfo(true);
+//        return interval + " > "+proportion;
+        return ""+interval;
+    }
+
+    public Point getPoint() {
+        return point;
+    }
+
+    public void setPoint(Point point) {
+        this.point = point;
     }
     
     

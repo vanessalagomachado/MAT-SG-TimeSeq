@@ -12,12 +12,13 @@ import java.util.List;
  *
  * @author vanes
  */
-public class MultipleAspectTrajectory {
+public class MultipleAspectTrajectory implements Cloneable {
 
     private String description;
     private int id;
     private List<Point> pointList;
     private int coverPoints;
+    private boolean dailyInfo;
 
     public MultipleAspectTrajectory(String description, int id) {
         this.description = description;
@@ -29,12 +30,11 @@ public class MultipleAspectTrajectory {
         this.id = id;
         pointList = new ArrayList<Point>();
     }
-    
-     public MultipleAspectTrajectory(String description) {
+
+    public MultipleAspectTrajectory(String description) {
         this.description = description;
         pointList = new ArrayList<Point>();
     }
-    
 
     public int getId() {
         return id;
@@ -61,9 +61,9 @@ public class MultipleAspectTrajectory {
         pointList.remove(p);
         p.setTrajectory(null);
     }
-    
-    public Point getLastPoint(){
-        return pointList.get(pointList.size()-1);
+
+    public Point getLastPoint() {
+        return pointList.get(pointList.size() - 1);
     }
 
     public int getCoverPoints() {
@@ -73,20 +73,26 @@ public class MultipleAspectTrajectory {
     public void setCoverPoints(int coverPoints) {
         this.coverPoints = coverPoints;
     }
+
+    public void incrementValue(int value) {
+        System.out.println("Cover points: " + coverPoints + " plus: " + value);
+        this.coverPoints += value;
+    }
     
-    public void incrementValue(int value){
-        this.coverPoints+=value;
+    public void decrementValue(int value) {
+        System.out.println("Cover points: " + coverPoints + " minus: " + value);
+        this.coverPoints -= value;
     }
 
     @Override
     public String toString() {
         String aux = "ID: " + id;
-        aux += "\nDescription: "+description;
+        aux += "\nDescription: " + description;
         if (!pointList.isEmpty()) {
             aux += "\nPoint List: \n";
 
             for (Point p : pointList) {
-                aux += p+"\n";
+                aux += p + "\n";
             }
         }
         return aux;
@@ -94,6 +100,19 @@ public class MultipleAspectTrajectory {
 
     public List<Point> getPointList() {
         return pointList;
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    public boolean isDailyInfo() {
+        return dailyInfo;
+    }
+
+    public void setDailyInfo(boolean dailyInfo) {
+        this.dailyInfo = dailyInfo;
     }
 
     

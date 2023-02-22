@@ -128,21 +128,17 @@ public class SimilarityMeasure {
      */
     private double score(Centroid p1, Point p2) throws ParseException {
         double score = 0;
+        //if centroid contains p of T, then the match occurs
         if (p1.getPointListSource().contains(p2)) {
             score += (getWeight("SPATIAL"));
-//            System.out.println("Spatial Match: "+score);
-//             System.out.println("Match spatial");
         }
 
         matchTemporal:
         {
             double match = 0;
-            
-            //Calendar timeStart = Calendar.getInstance(), timeEnd = Calendar.getInstance();
-
+            //if the time occurrence of p of T is into the centroid interval, the match occurs
             if (p1.getSti().getInterval().isInInterval(p2.getTime().getStartTime())){
                 match = p1.getSti().getProportion();
-//                System.out.println("Match Temporal");
             }
 
             // Vanessa: aqui criar uma classe maior com os tipos TemporalAspect e SemanticAspect, para poder vincular o peso
@@ -151,10 +147,9 @@ public class SimilarityMeasure {
             
         }
 
-        for (AttributeValue atvP1 : p1.getListAttrValues()) {
-            AttributeValue tempAttP2 = atvP1.getAttibute() != null ? p2.getAttributeValue(atvP1.getAttibute()) : null;
+        for (AttributeValue atvP1 : p1.getListAttrValues()) { //loop on list of attribute values of centroid
+            AttributeValue tempAttP2 = p2.getAttributeValue(atvP1.getAttibute()) != null ? p2.getAttributeValue(atvP1.getAttibute()) : null;
             double tempSemanticMatch = computeMatch(atvP1, tempAttP2);
-//            System.out.println("Match semantic: "+tempSemanticMatch);
             score += tempSemanticMatch;
 
         }
@@ -171,31 +166,37 @@ public class SimilarityMeasure {
      */
     public double computeMatch(AttributeValue rep, AttributeValue atv) {
         double match = 0;
-//        System.out.println("Att RP: "+rep +"  x  att T2: "+atv);
         if(atv == null || rep == null)
             return 0;
 
 
                 if (rep.getValue() instanceof Map) {
-//                    System.out.println("Entrou MAP");
                 // case of semantic - categorical
                 HashMap<String, Double> valuesRT = (HashMap) rep.getValue();
                 if (valuesRT.containsKey(((String) atv.getValue()).toUpperCase())) {
                     match = valuesRT.get(((String) atv.getValue()).toUpperCase());
                 }
+            } else { // numerical values
+                
+                if(rep.getNumericalValueSD() != 0)
+                    match = Math.abs(Double.parseDouble((String)rep.getValue()) - Double.parseDouble((String)atv.getValue())) <= (rep.getNumericalValueSD() * 2.5) ? 1.0 : 0;
+                else //default value
+                    match = Math.abs(Double.parseDouble((String)rep.getValue()) - Double.parseDouble((String)atv.getValue())) <= 10 ? 1.0 : 0;
+//                
+//                System.out.println("Numerical value: "+atv.getValue()+" -- RT value: "+rep.getValue()+" --Threshold value:  "+rep.getNumericalValueSD()*2.5+" -- Match value: "+match);
             }
 
         return match * getWeight(rep.getAttibute());
     }
 
     // Colocar em Util se der certo
-    public AttributeValue findAttributeValue(String name, List<AttributeValue> list) {
-        for (AttributeValue attr : list) {
-            if (attr.getAttibute().getName().equalsIgnoreCase(name)) {
-                return attr;
-            }
-        }
-        return null;
-    }
+//    public AttributeValue findAttributeValue(String name, List<AttributeValue> list) {
+//        for (AttributeValue attr : list) {
+//            if (attr.getAttibute().getName().equalsIgnoreCase(name)) {
+//                return attr;
+//            }
+//        }
+//        return null;
+//    }
 
 }

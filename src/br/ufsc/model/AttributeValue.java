@@ -14,12 +14,19 @@ import java.util.Objects;
 public class AttributeValue {
     private Object value;
     private SemanticAspect attibute;
+    private double numericalValueSD;
 
     public AttributeValue(Object value, SemanticAspect attibute) {
         this.value = value;
         this.attibute = attibute;
     }
 
+    public AttributeValue(Object value, SemanticAspect attibute, double SD) {
+        this.value = value;
+        this.attibute = attibute;
+        numericalValueSD = SD;
+    }
+    
     public SemanticAspect getAttibute() {
         return attibute;
     }
@@ -36,6 +43,16 @@ public class AttributeValue {
         this.value = value;
     }
 
+    
+    public double getNumericalValueSD() {
+        return numericalValueSD;
+    }
+
+    public void setNumericalValueSD(double numericalValueSD) {
+        this.numericalValueSD = numericalValueSD;
+    }
+    
+    
     @Override
     public int hashCode() {
         int hash = 5;
@@ -69,6 +86,7 @@ public class AttributeValue {
     public String toString() {
         return attibute.getName() +" -> "+value;
     }
+
     
     
     

@@ -61,6 +61,8 @@ public class Centroid extends Point implements Comparable{
 
     public void setSti(STI sti) {
         this.sti = sti;
+        if(sti != null)
+            this.sti.setPoint(this);
     }
 
     
@@ -74,18 +76,23 @@ public class Centroid extends Point implements Comparable{
     }
 
     public void addSTI(STI sti) {
+        sti.setPoint(this);
         listSTI.add(sti);
+        
     }
 
     public void addSTI(Date startTime, float proportion) {
-        listSTI.add(new STI(startTime, proportion));
+//        sti.setPoint(this);
+        listSTI.add(new STI(startTime, proportion, this));
     }
 
     public void addSTI(Date startTime, Date endTime, float proportion) {
-        listSTI.add(new STI(startTime, endTime, proportion));
+//        sti.setPoint(this);
+        listSTI.add(new STI(startTime, endTime, proportion, this));
     }
 
     public void removeSTI(STI time) {
+        time.setPoint(null);
         listSTI.remove(time);
     }
     
