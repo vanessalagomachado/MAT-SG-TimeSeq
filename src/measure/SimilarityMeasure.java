@@ -60,6 +60,18 @@ public class SimilarityMeasure {
             throw new NullPointerException();
         }
     }
+    
+    
+    public float getAllWeight() {
+        float sumWeight = 0.0f;
+        
+
+        for (Map.Entry<Object, Float> eachWeight : weights.entrySet()) {
+            sumWeight += eachWeight.getValue();
+            
+        }
+        return sumWeight;
+    }
 
     public void setThreshold(SemanticAspect att, float threshold) {
         this.thresholds.put(att, threshold);
@@ -141,7 +153,6 @@ public class SimilarityMeasure {
                 match = p1.getSti().getProportion();
             }
 
-            // Vanessa: aqui criar uma classe maior com os tipos TemporalAspect e SemanticAspect, para poder vincular o peso
             score += match * getWeight(p1.getSti());
             
             
@@ -189,14 +200,5 @@ public class SimilarityMeasure {
         return match * getWeight(rep.getAttibute());
     }
 
-    // Colocar em Util se der certo
-//    public AttributeValue findAttributeValue(String name, List<AttributeValue> list) {
-//        for (AttributeValue attr : list) {
-//            if (attr.getAttibute().getName().equalsIgnoreCase(name)) {
-//                return attr;
-//            }
-//        }
-//        return null;
-//    }
 
 }

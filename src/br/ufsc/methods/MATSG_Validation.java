@@ -18,7 +18,7 @@ On executable file, when analyst call the method notConsiderNulls, var considerN
 -- x --            
 For define the Z value the Maximun Z value is computed considering:
         - the maximun distance between the position of the more distance point of (0,0) position.
-        - then this value is decreased in 5% in each new computation
+        - then this value is decreased in 5% in each new computationMATSG_Validation
         - then the RM measurement is calculated together with CoverPoints
         - considering an allowable loss of up to 15% under the best Z calculated ("better measure") 
         - the best Z is defined when the calculated measure is not "best" for 3 interactions
@@ -40,7 +40,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -56,13 +55,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import measure.MUITAS;
 import measure.SimilarityMeasure;
 
 /**
  *
  * @author vanes
  */
-public class MATSG_R {
+public class MATSG_Validation {
 
     // setting to execute method
     String SEPARATOR;
@@ -135,6 +135,10 @@ public class MATSG_R {
     private boolean dailyInfo;
     private boolean considerNulls = true;
 
+    // For validation
+    private static String filenameFullDataset; //Filename of the dataset
+    private static List<MultipleAspectTrajectory> listAllTrajectories; //List of all MATs in the dataset
+
     /**
      * Method to perform all methods in order to summarize input MATs into a
      * representative MAT.
@@ -171,9 +175,10 @@ public class MATSG_R {
         pointsInCell = new ArrayList<>();
 
         lstCategoricalsPD = Arrays.asList(lstCategoricalPD);
-        if(ignoreColumns!=null)
+        if (ignoreColumns != null) {
             lstIgnoreCols = Arrays.asList(ignoreColumns);
-        
+        }
+
         //initialization of object of MAT as representative MAT
         representativeTrajectory = new MultipleAspectTrajectory("representative");
 //        betterRT = null;
@@ -196,74 +201,161 @@ public class MATSG_R {
         this.rc = rc;
 
         load(); // Load dataset follow data model representation
+        
+//        System.out.println("List T: "+listTrajectories.size()+" -- |points| = "+points.size());
+        
+        
+        listAllTrajectories = List.copyOf(listTrajectories);
+        listTrajectories = new ArrayList<MultipleAspectTrajectory>();
+        List<Point> auxClusterPoints = List.copyOf(points);
+        points = new ArrayList<Point>();
+        
+        
+        loadAllDataset();
+        
+//        System.out.println("List all T: "+listTrajectories.size()+" -- |points| = "+points.size());
+        
+        List<MultipleAspectTrajectory> auxDataset = List.copyOf(listTrajectories);
+        listTrajectories = null;
+        listTrajectories = List.copyOf(listAllTrajectories);
+        listAllTrajectories = null;
+        listAllTrajectories = List.copyOf(auxDataset);
+        points = List.copyOf(auxClusterPoints);
+        
+        
+//        System.out.println("Final load:");
+//        System.out.println("List T: "+listTrajectories.size()+" -- |points| = "+points.size());
+        
 
+//        System.out.println("All Dataset: "+listAllTrajectories.size());
+//        System.out.println("--------");
+//        System.out.println("Cluster: "+listTrajectories.size());
+        
+        
+        
+        
+        
         //automation - definition of better Z value - the spatial threshold
         // Calculates the spatial threshold according with the Z value and point dispersion
         computeSpatialThresholdOutliers();
 //        System.out.println("Z max: "+auxMaxZ);
-        int tempMaxZ = (int) auxMaxZ, tempBetterZ = -1;
-        float tempBetterRM = 0, tempRM25Z = 0, iCover25Z = -1.0f, tempOnlyRM;
-        int tempZ25 = 0;
-//        ArrayList<Integer> computedValues = new ArrayList<>();
+        
+
+
+        int tempMaxZ = (int) auxMaxZ, tempMinZ = 0, tempBetterZ = -1;
+        float tempBetterRM = 0, quartile, tempRM25Z = 0, tempRM75Z = 0;
+        int tempZ25, tempZ75;
+        ArrayList<Integer> computedValues = new ArrayList<>();
 
         String infoBetterRT = "";
-        int count = 0;
+        while (true) {
+            tempRM25Z = 0;
+            tempRM75Z = 0;
+            quartile = (float) (tempMaxZ - tempMinZ) / 4;
+            tempZ75 = Math.round(tempMaxZ - quartile);
+            tempZ25 = Math.round(tempMinZ + quartile);
+            System.out.println("[" + tempMinZ + " -- " + tempMaxZ + "] -- Q: " + quartile);
+            System.out.println("Z-25: " + tempZ25 + " | Z-75: " + tempZ75);
 
-        while (tempMaxZ > 1) {
+            if (!computedValues.contains(tempZ25)) {
+                resetValuesRT();
+                computedValues.add(tempZ25);
+                compute25p:
+                {
 
-            resetValuesRT();
+                    System.out.println("... computing Z-25:");
+                    cellSizeSpace = (spatialThreshold * tempZ25) * 0.7071; // Calcultes size of the cells
 
-            cellSizeSpace = (spatialThreshold * tempMaxZ) * 0.7071; // Calcultes size of the cells
+                    allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
 
-            allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
+                    threshold_rc = rc > 0.0 ? (rc * points.size()) : 2; //If rc is greater than zero sets threshold according with number of points, else sets to 2
 
-            threshold_rc = rc > 0.0 ? (rc * points.size()) : 2; //If rc is greater than zero sets threshold according with number of points, else sets to 2
+                    findCentroid(); //Creates the representative trajectory
 
-            findCentroid(); //Creates the representative trajectory
+                    computeCentroid();
 
-            computeCentroid();
+                    tempRM25Z = (float) medianMeasureRecall();
 
-            if (!representativeTrajectory.getPointList().isEmpty()) {
-                tempRM25Z = (float) medianMeasureRecall();
-                tempOnlyRM = tempRM25Z;
-
-                iCover25Z = (float) representativeTrajectory.getCoverPoints() / points.size();
-                System.out.println("|Tc|  = " + representativeTrajectory.getCoverPoints());
-                System.out.println("RM  = " + tempRM25Z);
-                System.out.println("% |Tc|  = " + iCover25Z);
-
-                tempRM25Z = (tempRM25Z * 0.5f) + (iCover25Z * 0.5f);
-//                System.out.println("% |RM / Tc|  = " + tempRM25Z);
-//                if ((tempRM25Z) >= tempBetterRM) {
-                if ((tempRM25Z * 1.15) >= tempBetterRM) {
-                    tempBetterZ = tempMaxZ;
-                    tempBetterRM = tempRM25Z;
-                    count = 0;
-                    betterRT = null;
-                    betterRT = (MultipleAspectTrajectory) representativeTrajectory.clone();
-                    infoBetterRT = tempBetterZ + ", "
-                            + betterRT.getPointList().size() + ", "
-                            + cellSizeSpace + ", " + rc + ", "
-                            + threshold_rc + ", " + threshold_rv + ", "
-                            + spatialCellGrid.size() + ", " + tempBetterRM + ", " + betterRT.getCoverPoints()
-                            + ", " + tempOnlyRM;
-
-                } else {
-                    count++;
+//                if (!representativeTrajectory.getPointList().isEmpty()) {
+//                    writeRepresentativeTrajectory("..\\" + directory + "result\\" + filename + "[output] - z" + tempZ25, ext);
+//                }
+//                writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempZ25, tempRM25Z, false);
                 }
-
             }
 
-            tempMaxZ *= 0.95;
+            if (!computedValues.contains(tempZ75)) {
 
-            if (count > 3) {
+                resetValuesRT();
+                computedValues.add(tempZ75);
+                compute75p:
+                {
+                    System.out.println("... computing Z-75:");
+                    cellSizeSpace = (spatialThreshold * tempZ75) * 0.7071; // Calcultes size of the cells
+
+                    allocateAllPointsInCellSpace(); // Distributes all points in the spatial grid
+
+                    threshold_rc = rc > 0.0 ? (rc * points.size()) : 2; //If rc is greater than zero sets threshold according with number of points, else sets to 2
+
+                    findCentroid(); //Creates the representative trajectory
+
+                    computeCentroid();
+
+                    tempRM75Z = (float) medianMeasureRecall();
+
+//                writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempZ75, tempRM75Z, false);
+                }
+            }
+            System.out.println("tempRM25Z = "+tempRM25Z+" -- tempRM75Z = "+tempRM75Z);
+            if (tempRM25Z > tempRM75Z
+                    && tempRM25Z * 1.1 >= tempBetterRM) {
+                System.out.println("entrou 25 é melhor");
+                tempBetterRM = tempRM25Z;
+                tempBetterZ = (int) tempZ25;
+                tempMaxZ -= (quartile * 2);
+                betterRT = (MultipleAspectTrajectory) representativeTrajectory.clone();
+                infoBetterRT = tempBetterZ + ", "
+                        + betterRT.getPointList().size() + ", "
+                        + cellSizeSpace + ", " + rc + ", "
+                        + threshold_rc + ", " + threshold_rv + ", "
+                        + spatialCellGrid.size() + ", " + tempBetterRM + ", " + betterRT.getCoverPoints()
+                        + ", " + tempBetterRM;
+            } else if (tempRM75Z > tempRM25Z
+                    && tempRM75Z * 1.1 >= tempBetterRM) {
+                System.out.println("entrou 75 é melhor");
+                tempBetterRM = tempRM75Z;
+                tempBetterZ = (int) tempZ75;
+                tempMinZ += (quartile * 2);
+                betterRT = (MultipleAspectTrajectory) representativeTrajectory.clone();
+                infoBetterRT = tempBetterZ + ", "
+                        + betterRT.getPointList().size() + ", "
+                        + cellSizeSpace + ", " + rc + ", "
+                        + threshold_rc + ", " + threshold_rv + ", "
+                        + spatialCellGrid.size() + ", " + tempBetterRM + ", " + betterRT.getCoverPoints()
+                        + ", " + tempBetterRM;
+            } else {
+//                writeInfosRT("..\\" + directory + "result\\" + filename + "[infos]", ext, tempBetterZ, tempBetterRM, true);
+                if (betterRT != null && !betterRT.getPointList().isEmpty()) {
+                    String outputFile = directory + "output\\" + filename + " rc " + (int) (rc * 100) + " rv " + (int) (threshold_rv * 100) + " - z" + tempBetterZ;
+                    System.out.println("Path RT: " + outputFile);
+                    writeRepresentativeTrajectory(outputFile, infoBetterRT);
+                    rank_MUITAS(outputFile);
+                    break;
+                }
+                
+            }
+
+            if (tempMaxZ == tempMinZ) {
+                if (!betterRT.getPointList().isEmpty()) {
+                    String outputFile = directory + "output\\" + filename + " rc " + (int) (rc * 100) + " rv " + (int) (threshold_rv * 100) + " - z" + tempBetterZ;
+                    System.out.println("Path RT: " + outputFile);
+                    writeRepresentativeTrajectory(outputFile, infoBetterRT);
+                    rank_MUITAS(outputFile);
+                }
                 break;
-
             }
+
         } // fim do laço infinito - // Fim automação
-        if (tempBetterZ > 1) {
-            writeRepresentativeTrajectory("..\\" + directory + "output\\" + filename + " rc " + (int) (rc * 100) + " rv " + (int) (threshold_rv * 100) + " - z" + tempBetterZ, infoBetterRT);
-        }
+
     }
 
     public void resetValuesRT() {
@@ -294,7 +386,6 @@ public class MATSG_R {
         String datasetRow = reader.readLine();
         //To Get the header of dataset
         String[] datasetColumns = datasetRow.split(SEPARATOR);
-        
 
         //To add all types of attributes in the dataset, specified in the first line
         int order = 0;
@@ -312,6 +403,7 @@ public class MATSG_R {
 
         //EoF - To get the trajectory data of dataset of each line
         while (datasetRow != null) {
+//            System.out.println("linha: "+datasetRow);
             datasetColumns = datasetRow.toUpperCase().split(SEPARATOR);
             addAttributeValues(datasetColumns);
             datasetRow = reader.readLine();
@@ -450,7 +542,7 @@ public class MATSG_R {
      * summarizating all aspects
      */
     public void findCentroid() {
-
+        
         //Create iterator object of all spatial grid cells
         Iterator<String> cell = spatialCellGrid.keySet().iterator();
         while (cell.hasNext()) {
@@ -460,6 +552,7 @@ public class MATSG_R {
             int qntPoints = spatialCellGrid.get(cellAnalyzed).cardinality();
             System.out.println("Cell Analyzed: " + cellAnalyzed + " | points: " + qntPoints + " | threshold RC: " + threshold_rc);
             if (qntPoints >= threshold_rc) { // IF number is at least a threshold RC
+                
                 resetValuesToSummarization();
 //                representativeTrajectory.incrementValue(qntPoints);
 
@@ -468,9 +561,11 @@ public class MATSG_R {
                         pointId >= 0;
                         pointId = spatialCellGrid.get(cellAnalyzed).nextSetBit(pointId + 1)) {
                     pointsInCell.add(points.get(pointId - 1));
+                    
 
                     //Temporal data 
                     listTimesInCell.add(points.get(pointId - 1).getTime().getStartTime()); // update: add start time (in Date) of point in a list 
+                    
                 }
                 presentCell = cellAnalyzed;
                 //Temporal data
@@ -485,8 +580,9 @@ public class MATSG_R {
         // Ordernate temporal ranking 
         listRepPoint = listRepPoint.stream().sorted().collect(Collectors.toList());
 //        coverPoints = 0;
-//        System.out.println("Lista RP: " + listRepPoint);
+        System.out.println("Lista RP: " + listRepPoint);
         for (Centroid representativePoint : listRepPoint) {
+            
             resetValuesToSummarization();
             representativeTrajectory.addPoint(representativePoint);
 
@@ -917,11 +1013,11 @@ public class MATSG_R {
      * Writes the generated representative trajectory in a new .csv file
      *
      * @param fileOutput -- output file name
-     * @param ext -- Extension of the file (e.g. csv)
      */
     public void writeRepresentativeTrajectory(String fileOutput, String infoBetterRT) {
         try {
-            CSVWriter mxWriter = new CSVWriter("datasets/" + fileOutput + extension);
+            System.out.println("Entrou -- writeRT");
+            CSVWriter mxWriter = new CSVWriter(fileOutput + extension);
             mxWriter.writeLine("Method runtime information:");
             mxWriter.writeLine("Start timestamp: " + initialTemp);
             mxWriter.writeLine("End timestemp: " + new Date());
@@ -948,7 +1044,8 @@ public class MATSG_R {
             mxWriter.close();
         } catch (IOException e) {
 //					Logger.log(Type.ERROR, pfx + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error on writting RT: " + e.toString());
+//e.printStackTrace();
         }
     }
 
@@ -1115,6 +1212,136 @@ public class MATSG_R {
 
     public void notConsiderNulls() {
         considerNulls = false;
+    }
+
+    // Validation -- 
+    public void rank_MUITAS(String fileOutput) throws ParseException {
+        /*
+        Passo a passo do que fazer:
+
+        ---- **analise setting of threshold on MUITAS paper
+         */
+        System.out.println("Entrou - Write rank MUITAS");
+
+        if (betterRT.getPointList().isEmpty()) {
+            System.out.println("RT zerada");
+
+        } else {
+
+            MUITAS measure = new MUITAS();
+
+            //Compute thresholds
+            //3D with equal weight (0.33) e totalizando 1.0
+            measure.setWeight("SPATIAL", 0.34f);
+            measure.setWeight("TIME", 0.33f);
+
+            float auxWeight = 0.33f / (attributes.size());
+//        System.out.println("Lista de semantic att: " + attributes);
+            for (SemanticAspect eachAtt : attributes) {
+
+                measure.setWeight(eachAtt, auxWeight);
+
+            }
+
+            Map<Object, Double> rankMeasures = new HashMap<>();
+            String infoMeasure = "";
+            for (MultipleAspectTrajectory eachTraj : listAllTrajectories) {
+
+                rankMeasures.put(eachTraj, measure.similarityOf(betterRT, eachTraj));
+
+            }
+
+            rankMeasures = rankMeasures.entrySet().stream()
+                    .sorted(Map.Entry.<Object, Double>comparingByValue().reversed())
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                            (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+            System.out.println("Rank MUITAS: " + rankMeasures);
+
+            int countTclass = 0;
+            int countRetrivied = 0;
+
+            for (Map.Entry<Object, Double> retriviedT : rankMeasures.entrySet()) {
+                countRetrivied++;
+                infoMeasure
+                        += ((MultipleAspectTrajectory) retriviedT.getKey()).getId() + ", "
+                        + retriviedT.getValue() + ", "
+                        + countRetrivied + ", ";
+                if (listTrajectories.contains((MultipleAspectTrajectory) retriviedT.getKey())) {
+                    countTclass++;
+                    infoMeasure += "1";
+                } else {
+                    infoMeasure += "0";
+                }
+                infoMeasure += "\n";
+                if (countTclass == listTrajectories.size()) {
+                    break;
+                }
+            }
+
+            System.out.println("|T_class| = " + countTclass);
+            System.out.println("|T_retrivied| = " + countRetrivied);
+            System.out.println("Precision = " + ((double) countTclass / countRetrivied));
+
+//        ---- write on a new file CSV each line the measure of each T and if this T is of the cluster used to compute RT
+//        ---- next: write on a new File the rank of MUITAS --> id,measure,rank,clusterOfRT
+            try {
+                CSVWriter mxWriter = new CSVWriter(fileOutput + "[Validation]" + extension);
+                mxWriter.writeLine("Method validation information:");
+                mxWriter.writeLine("|Ground Truth|, |all input dataset|, |T.retrivied|, Precision, Recall, F-Score");
+                mxWriter.writeLine(listTrajectories.size() + ", " + listAllTrajectories.size() + ", " + countRetrivied + ", " + ((double) listTrajectories.size() / countRetrivied) + ", ??, ??");
+
+                mxWriter.writeLine("##");
+                mxWriter.writeLine("Measure description:");
+                mxWriter.writeLine("Trajectory ID, MUITAS, #rank, Ground Truth?");
+                mxWriter.writeLine(infoMeasure);
+                mxWriter.flush();
+                mxWriter.close();
+
+                CSVWriter valWriter;
+
+                String fileCompleteValidation = directory + "output\\" + filename + "[Validation]" + extension;
+                if (!new File(fileCompleteValidation).exists()) {
+                    valWriter = new CSVWriter(fileCompleteValidation);
+                    valWriter.writeLine("Method validation information:");
+                    valWriter.writeLine("Setting rv, Setting rc, |Ground Truth|, |all input dataset|, |T.retrivied|, Precision, Recall, F-Score");
+
+                } else {
+                    valWriter = new CSVWriter(fileCompleteValidation, true);
+                }
+                valWriter.writeLine(threshold_rv + ", " + rc + ", " + listTrajectories.size() + ", " + listAllTrajectories.size() + ", " + countRetrivied + ", " + ((double) listTrajectories.size() / countRetrivied) + ", ??, ??");
+                valWriter.flush();
+                valWriter.close();
+
+            } catch (IOException e) {
+                System.err.println("Error on rank input trajectories X RT: " + e);
+            }
+
+        }
+
+    }
+
+    private void loadAllDataset() throws IOException, ParseException {
+
+        java.io.Reader input = new FileReader(directory + filenameFullDataset + extension);
+        BufferedReader reader = new BufferedReader(input);
+
+        String datasetRow = reader.readLine();
+
+        datasetRow = reader.readLine();
+        String[] datasetColumns;
+        //EoF - To get the trajectory data of dataset of each line
+        while (datasetRow != null) {
+            datasetColumns = datasetRow.toUpperCase().split(SEPARATOR);
+            addAttributeValues(datasetColumns);
+            datasetRow = reader.readLine();
+        }
+
+        reader.close();
+
+    }
+
+    public static void setFilenameFullDataset(String filenameFullDataset) {
+        MATSG_Validation.filenameFullDataset = filenameFullDataset;
     }
 
 }

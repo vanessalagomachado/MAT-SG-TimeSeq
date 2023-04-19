@@ -14,6 +14,8 @@ import java.util.List;
  */
 public class MultipleAspectTrajectory implements Cloneable {
 
+    
+
     private String description;
     private int id;
     private List<Point> pointList;
@@ -74,27 +76,32 @@ public class MultipleAspectTrajectory implements Cloneable {
         this.coverPoints = coverPoints;
     }
 
-    public void incrementValue(int value) {
-        System.out.println("Cover points: " + coverPoints + " plus: " + value);
-        this.coverPoints += value;
+    /**
+     * Method to increment some data points (size of points) to compute coverPoints,
+     * -- i.e., the input data points covered by our representative trajectory
+     * @param sizeDataPoints 
+     */
+    public void incrementValue(int sizeDataPoints) {
+//        System.out.println("Cover points: " + coverPoints + " plus: " + sizeDataPoints);
+        this.coverPoints += sizeDataPoints;
     }
     
     public void decrementValue(int value) {
-        System.out.println("Cover points: " + coverPoints + " minus: " + value);
+//        System.out.println("Cover points: " + coverPoints + " minus: " + value);
         this.coverPoints -= value;
     }
 
     @Override
     public String toString() {
         String aux = "ID: " + id;
-        aux += "\nDescription: " + description;
-        if (!pointList.isEmpty()) {
-            aux += "\nPoint List: \n";
-
-            for (Point p : pointList) {
-                aux += p + "\n";
-            }
-        }
+//        aux += "\nDescription: " + description;
+//        if (!pointList.isEmpty()) {
+//            aux += "\nPoint List: \n";
+//
+//            for (Point p : pointList) {
+//                aux += p + "\n";
+//            }
+//        }
         return aux;
     }
 
@@ -115,5 +122,25 @@ public class MultipleAspectTrajectory implements Cloneable {
         this.dailyInfo = dailyInfo;
     }
 
-    
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 97 * hash + this.id;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final MultipleAspectTrajectory other = (MultipleAspectTrajectory) obj;
+        return this.id == other.id;
+    }
 }

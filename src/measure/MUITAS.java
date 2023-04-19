@@ -82,6 +82,16 @@ public class MUITAS {
         }
     }
     
+    public float getAllWeight() {
+        float sumWeight = 0.0f;
+        
+
+        for (Map.Entry<Object, Float> eachWeight : weights.entrySet()) {
+            sumWeight += eachWeight.getValue();
+            
+        }
+        return sumWeight;
+    }
 
 
     public double getParityT1T2() {
@@ -103,11 +113,11 @@ public class MUITAS {
             for (int j = 0; j < t2.getPointList().size(); j++) {
 //                System.out.println("Pontos a serem analisados: "+t1.getPointList().get(i)+"\nand: "+t2.getPointList().get(j));
                 scores[i][j] = this.score((Centroid) t1.getPointList().get(i), t2.getPointList().get(j));
-                System.out.println("Score [" + i + ", " + j + "] = " + scores[i][j]);
+//                System.out.println("Score [" + i + ", " + j + "] = " + scores[i][j]);
                 maxScoreRow = scores[i][j] > maxScoreRow ? scores[i][j] : maxScoreRow;
             }
 
-            System.out.println("----- x ------");
+//            System.out.println("----- x ------");
             parityT1T2 += maxScoreRow;
 
         }
@@ -180,7 +190,7 @@ public class MUITAS {
                 else //default value
                     match = Math.abs(Double.parseDouble((String)rep.getValue()) - Double.parseDouble((String)atv.getValue())) <= 10 ? 1.0 : 0;
 //                
-                System.out.println("Numerical value: "+atv.getValue()+" -- RT value: "+rep.getValue()+" --Threshold value:  "+rep.getNumericalValueSD()*2.5+" -- Match value: "+match);
+//                System.out.println("Numerical value: "+atv.getValue()+" -- RT value: "+rep.getValue()+" --Threshold value:  "+rep.getNumericalValueSD()*2.5+" -- Match value: "+match);
             }
 
         return match * getWeight(rep.getAttibute());

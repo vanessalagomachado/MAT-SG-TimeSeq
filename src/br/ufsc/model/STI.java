@@ -80,7 +80,7 @@ public class STI {
 
     @Override
     public String toString() {
-        if(point.getTrajectory().isDailyInfo())
+        if(point!=null && point.getTrajectory().isDailyInfo())
             interval.setDailyInfo(true);
 //        return interval + " > "+proportion;
         return ""+interval;

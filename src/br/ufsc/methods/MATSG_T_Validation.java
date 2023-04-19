@@ -18,10 +18,28 @@ On executable file, when analyst call the method notConsiderNulls, var considerN
 -- x --            
 For define the Z value the Maximun Z value is computed considering:
         - the maximun distance between the position of the more distance point of (0,0) position.
-        - then this value is decreased in 5% in each new computation
+        - then this value is decreased in 5% in each new computationMATSG_Validation
         - then the RM measurement is calculated together with CoverPoints
         - considering an allowable loss of up to 15% under the best Z calculated ("better measure") 
         - the best Z is defined when the calculated measure is not "best" for 3 interactions
+
+
+----
+More: analysis of RV
+
+
+T more: update on RV to automatize with 
+
+-- Ideia de mudança
+RV -- setar parada como um % do maior percentual (rank) Ex: rank
+A 0.5
+B 0.4
+C 0.34
+D 0.12
+parada em 50% do maior rank: 
+maior 0.5 -- parada 0.25
+
+
 
  */
 package br.ufsc.methods;
@@ -40,7 +58,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -56,13 +73,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import measure.MUITAS;
 import measure.SimilarityMeasure;
 
 /**
  *
  * @author vanes
  */
-public class MATSG_R {
+public class MATSG_T_Validation {
 
     // setting to execute method
     String SEPARATOR;
@@ -118,10 +136,11 @@ public class MATSG_R {
 
     // --- Define initial index value to semantic attributes
     private static int INDEX_SEMANTIC = 3;
+    
 
     //V9 - parameters to MAT-SG
     private float threshold_rc; //To define relevant cells 
-    private float threshold_rv; //To define relevant values in rank values, which values in rank are representative
+//    private float threshold_rv; //To define relevant values in rank values, which values in rank are representative
     private float rc; //To define relevant values in rank values, which values in rank are representative
 
     //aux to know the cell of each rp
@@ -135,6 +154,14 @@ public class MATSG_R {
     private boolean dailyInfo;
     private boolean considerNulls = true;
 
+    // For validation
+    private static String filenameFullDataset; //Filename of the dataset
+    private static List<MultipleAspectTrajectory> listAllTrajectories; //List of all MATs in the dataset
+
+    
+    
+    //For T version -- data cut definition 
+    private static float cutRV = 0.4f;
     /**
      * Method to perform all methods in order to summarize input MATs into a
      * representative MAT.
@@ -153,8 +180,28 @@ public class MATSG_R {
         extension = ext;
         this.SEPARATOR = SEPARATOR;
         this.valuesNulls = valuesNULL;
+        //Parameter for defining representativeness values and compute relevant cell
+//        this.threshold_rv = threshold_rv;
 
-//        this.valueZ = numberSpatialDistance;
+        //rc is defined as the minimun number of points ( calculated by the % of all points) that should have in each cell
+        this.rc = rc;
+
+        lstCategoricalsPD = Arrays.asList(lstCategoricalPD);
+        if (ignoreColumns != null) {
+            lstIgnoreCols = Arrays.asList(ignoreColumns);
+        }
+
+        //initialization of object of MAT as representative MAT
+        representativeTrajectory = new MultipleAspectTrajectory("representative");
+        if (!patternDateInput.equals("?")) {
+            this.formatDate = new SimpleDateFormat(patternDateInput);
+//            this.formatDateOut = new SimpleDateFormat("HH:mm:ss");
+
+        } else {
+            this.representativeTrajectory.setDailyInfo(true);
+            dailyInfo = true;
+        }
+
         //initialization of aux attributes
         rId = 0;
         auxTid = "-1";
@@ -170,33 +217,31 @@ public class MATSG_R {
         listTrajectories = new ArrayList<MultipleAspectTrajectory>();
         pointsInCell = new ArrayList<>();
 
-        lstCategoricalsPD = Arrays.asList(lstCategoricalPD);
-        if(ignoreColumns!=null)
-            lstIgnoreCols = Arrays.asList(ignoreColumns);
-        
-        //initialization of object of MAT as representative MAT
-        representativeTrajectory = new MultipleAspectTrajectory("representative");
-//        betterRT = null;
-
-        if (!patternDateInput.equals("?")) {
-            this.formatDate = new SimpleDateFormat(patternDateInput);
-//            this.formatDateOut = new SimpleDateFormat("HH:mm:ss");
-
-        } else {
-            this.representativeTrajectory.setDailyInfo(true);
-            dailyInfo = true;
-        }
-
         //aux representative MAT for ordenate
         listRepPoint = new ArrayList<>();
 
-        //Parameter for defining representativeness values and compute relevant cell
-        this.threshold_rv = threshold_rv;
-        //rc is defined as the minimun number of points ( calculated by the % of all points) that should have in each cell
-        this.rc = rc;
+        // Load dataset follow data model representation
+        load();
 
-        load(); // Load dataset follow data model representation
+//        System.out.println("List T: "+listTrajectories.size()+" -- |points| = "+points.size());
+        listAllTrajectories = List.copyOf(listTrajectories);
+        listTrajectories = new ArrayList<MultipleAspectTrajectory>();
+        List<Point> auxClusterPoints = List.copyOf(points);
+        points = new ArrayList<Point>();
 
+        loadAllDataset();
+
+//        System.out.println("List all T: "+listTrajectories.size()+" -- |points| = "+points.size());
+        List<MultipleAspectTrajectory> auxDataset = List.copyOf(listTrajectories);
+        listTrajectories = null;
+        listTrajectories = List.copyOf(listAllTrajectories);
+        listAllTrajectories = null;
+        listAllTrajectories = List.copyOf(auxDataset);
+        points = List.copyOf(auxClusterPoints);
+
+//        System.out.println("All Dataset: "+listAllTrajectories.size());
+//        System.out.println("--------");
+//        System.out.println("Cluster: "+listTrajectories.size());
         //automation - definition of better Z value - the spatial threshold
         // Calculates the spatial threshold according with the Z value and point dispersion
         computeSpatialThresholdOutliers();
@@ -235,7 +280,7 @@ public class MATSG_R {
                 tempRM25Z = (tempRM25Z * 0.5f) + (iCover25Z * 0.5f);
 //                System.out.println("% |RM / Tc|  = " + tempRM25Z);
 //                if ((tempRM25Z) >= tempBetterRM) {
-                if ((tempRM25Z * 1.15) >= tempBetterRM) {
+                if ((tempRM25Z * 1.1) >= tempBetterRM) {
                     tempBetterZ = tempMaxZ;
                     tempBetterRM = tempRM25Z;
                     count = 0;
@@ -254,16 +299,23 @@ public class MATSG_R {
 
             }
 
-            tempMaxZ *= 0.95;
+            tempMaxZ *= 0.9;
 
             if (count > 3) {
                 break;
 
             }
         } // fim do laço infinito - // Fim automação
+        System.out.println("Better Z (Max) = " + tempMaxZ);
+        System.out.println("Better Z (tempBetterZ)= " + tempBetterZ);
+
         if (tempBetterZ > 1) {
-            writeRepresentativeTrajectory("..\\" + directory + "output\\" + filename + " rc " + (int) (rc * 100) + " rv " + (int) (threshold_rv * 100) + " - z" + tempBetterZ, infoBetterRT);
+            String outputFile = directory + "output\\" + filename + " rc " + (int) (rc * 100) + " rv " + (int) (threshold_rv * 100) + " - z" + tempBetterZ;
+//            System.out.println("Path RT: "+outputFile);
+            writeRepresentativeTrajectory(outputFile, infoBetterRT);
+            rank_MUITAS(outputFile);
         }
+
     }
 
     public void resetValuesRT() {
@@ -294,24 +346,30 @@ public class MATSG_R {
         String datasetRow = reader.readLine();
         //To Get the header of dataset
         String[] datasetColumns = datasetRow.split(SEPARATOR);
-        
 
         //To add all types of attributes in the dataset, specified in the first line
+        // Vanessa: Parei aqui -- att category está pegando att errado.....
         int order = 0;
         for (String s : Arrays.copyOfRange(datasetColumns, INDEX_SEMANTIC, datasetColumns.length)) {
-            if (lstCategoricalsPD.contains(s.toUpperCase())) //If attribute was predefined as categorical
+            if (lstIgnoreCols == null || !lstIgnoreCols.contains(s.toUpperCase().trim())) {
+//                System.out.println("Entrou: Att not ignored: "+s);
+                attributes.add(new SemanticAspect(s.toUpperCase().trim(), order++));
+            } else if (lstCategoricalsPD.contains(s.toUpperCase())) //If attribute was predefined as categorical
             {
+//                System.out.println("Entrou: Att cat: "+s);
                 attributes.add(new SemanticAspect(s.toUpperCase(), order++, SemanticType.CATEGORICAL));
-            } else if (lstIgnoreCols == null || !lstIgnoreCols.contains(s.toUpperCase())) {
-                attributes.add(new SemanticAspect(s.toUpperCase(), order++));
+            } else {
+                order++;
             }
 
         }
+//        System.out.println("Lista de atributos: "+attributes);
 
         datasetRow = reader.readLine();
 
         //EoF - To get the trajectory data of dataset of each line
         while (datasetRow != null) {
+//            System.out.println("linha: "+datasetRow);
             datasetColumns = datasetRow.toUpperCase().split(SEPARATOR);
             addAttributeValues(datasetColumns);
             datasetRow = reader.readLine();
@@ -551,49 +609,76 @@ public class MATSG_R {
             // ---- Semantic data
             //Loop for numeric attributes
             sematicNumericFusionVal.entrySet().forEach((entrada) -> {
-                Double median;
+                Double median = -1.0;
+                Map<Object, Double> newMap = new HashMap<>();
 //                System.out.println("Quantidade pontos na celula: "+(representativePoint.getPointListSource().size()));
 //                System.out.println("Quantidade valid values: "+(entrada.getValue().size()));
-                if (entrada.getValue().isEmpty()) {
-                    median = -999.0;
-                } // When the size of null values is more than valid values
-                else if ((representativePoint.getPointListSource().size() - entrada.getValue().size())
-                        > entrada.getValue().size()) {
-                    median = -999.0;
+
+                if (considerNulls) {
+                    if (entrada.getValue().isEmpty()) {
+                        median = -999.0;
+                    } // When the size of null values is more than valid values
+                    else if ((representativePoint.getPointListSource().size() - entrada.getValue().size())
+                            > entrada.getValue().size()) {
+                        median = -999.0;
+                        representativePoint.addAttrValue("" + median,
+                                findAttributeForOrder(Integer.parseInt(entrada.getKey())));
+                        //When the size of null values and valid values are equals
+                    } else if (representativePoint.getPointListSource().size() - entrada.getValue().size()
+                            == entrada.getValue().size()) {
+
+                        newMap.put("-999.0", 0.5);
+                        Collections.sort(entrada.getValue());
+
+                        //Calculates the median value for all numeric attributes of the representative point
+                        if (entrada.getValue().size() % 2 == 0) {
+                            median = (entrada.getValue().get(entrada.getValue().size() / 2) + entrada.getValue().get(entrada.getValue().size() / 2 - 1)) / 2;
+                        } else {
+                            median = entrada.getValue().get(entrada.getValue().size() / 2);
+                        }
+                        newMap.put("" + median, 0.5);
+
+//                    representativePoint.addAttrValue(newMap,
+//                            findAttributeForOrder(Integer.parseInt(entrada.getKey())));
+                        //When the size of VALID values is more than the size of null values, 
+                        //or equal proportion and is not consider null values
+                    } else {
+                        Collections.sort(entrada.getValue());
+                        //Calculates the median value for all numeric attributes of the representative point
+                        if (entrada.getValue().size() % 2 == 0) {
+                            median = (entrada.getValue().get(entrada.getValue().size() / 2) + entrada.getValue().get(entrada.getValue().size() / 2 - 1)) / 2;
+                        } else {
+                            median = entrada.getValue().get(entrada.getValue().size() / 2);
+                        }
+                    }
+
+                } else { // When not consider null values in computation (!considerNulls)
+                    //Calculates the median value for all numeric attributes of the representative point 
+                    // when the number of valid values is more (or equals) than null values
+                    if (!entrada.getValue().isEmpty() && 
+                            (representativePoint.getPointListSource().size() - entrada.getValue().size())
+                            <= entrada.getValue().size()) {
+                        //Calculates the median value for all numeric attributes of the representative point
+                        if (entrada.getValue().size() % 2 == 0) {
+                            median = (entrada.getValue().get(entrada.getValue().size() / 2) + entrada.getValue().get(entrada.getValue().size() / 2 - 1)) / 2;
+                        } else {
+                            median = entrada.getValue().get(entrada.getValue().size() / 2);
+                        }
+                        
+                    }
+
+                }
+
+                //Set attribute value
+                if (newMap.isEmpty() && median != -1.0) {
                     representativePoint.addAttrValue("" + median,
                             findAttributeForOrder(Integer.parseInt(entrada.getKey())));
-                    //When the size of null values and valid values are equals
-                } else if (considerNulls && (representativePoint.getPointListSource().size() - entrada.getValue().size())
-                        == entrada.getValue().size()) {
-                    Map<Object, Double> newMap = new HashMap<>();
-
-                    newMap.put("-999.0", 0.5);
-                    Collections.sort(entrada.getValue());
-
-                    //Calculates the median value for all numeric attributes of the representative point
-                    if (entrada.getValue().size() % 2 == 0) {
-                        median = (entrada.getValue().get(entrada.getValue().size() / 2) + entrada.getValue().get(entrada.getValue().size() / 2 - 1)) / 2;
-                    } else {
-                        median = entrada.getValue().get(entrada.getValue().size() / 2);
-                    }
-                    newMap.put("" + median, 0.5);
-
+                } else if (!newMap.isEmpty()) {
                     representativePoint.addAttrValue(newMap,
                             findAttributeForOrder(Integer.parseInt(entrada.getKey())));
-
-                    //When the size of VALID values is more than the size of null values, or equal proportion and is not consider null values
-                } else {
-                    Collections.sort(entrada.getValue());
-
-                    //Calculates the median value for all numeric attributes of the representative point
-                    if (entrada.getValue().size() % 2 == 0) {
-                        median = (entrada.getValue().get(entrada.getValue().size() / 2) + entrada.getValue().get(entrada.getValue().size() / 2 - 1)) / 2;
-                    } else {
-                        median = entrada.getValue().get(entrada.getValue().size() / 2);
-                    }
                 }
-                representativePoint.addAttrValue("" + median,
-                        findAttributeForOrder(Integer.parseInt(entrada.getKey())));
+                //Case of null median not is added (when not consider null values)
+
             });
 
             //begin -------- Loop for a categorical attributes
@@ -685,6 +770,7 @@ public class MATSG_R {
             }
         }
 
+//        System.out.println("Dif all elements: " + differences);
         //Average temporal differences 
         float avg = sumDifferences / differences.size();
 
@@ -717,46 +803,42 @@ public class MATSG_R {
 
                 //for removing outliers:
                 //remove values temporal differences less and upper the valid interval defined
+                /// Vanessa: Mexi aquii ---- remember
                 for (int i = 0; i < differences.size(); i++) {
                     if (differences.get(i) < lessValue) {
                         sumDifferences -= (int) differences.get(i);
                         differences.remove(differences.get(i));
                         i--;
-                    } else {
-                        break;
+                    } else if (differences.get(i) > upperValue) {
+                        sumDifferences -= (int) differences.get(i);
+                        differences.remove(differences.get(i));
+                        i--;
                     }
                 }
 
-                for (int i = differences.size() - 1; i >= 0; i--) {
-                    if (differences.get(i) > upperValue) {
-                        sumDifferences -= (int) differences.get(i);
-                        differences.remove(differences.get(i));
-                    } else {
-                        break;
-                    }
-                }
-//                
-//                System.out.println("Dif 2: " + differences);
+//                System.out.println("Dif - valid elements: " + differences);
                 // update threshold value to average value of temporal differences considering only valid values
                 threshold = Math.floorDiv((int) sumDifferences, differences.size());
             }
         }
-        //End computation of temporal threshold
 
+//        System.out.println("Time threshold: "+threshold);
+        //End computation of temporal threshold
         int cont = 1;
 //        Map<String, Integer> temporalRanking = new HashMap<>();
-        STI newSTI;
+//        STI newSTI;
         TemporalAspect aspTime = null;
 //        System.out.println("TAU Temp: "+threshold);
         for (int i = 0; i < timeInPoints.size(); i++) {
 
             /*
-            IF the occurrence is not the last, 
+            IF the occurrence is not the last one, 
             and two consecutive occurrences are considered a significant temporal interval (STI), 
             considering the threshold value, then it is considered a new valid interval
              */
             if ((i != timeInPoints.size() - 1)
-                    && (TimeUnit.MINUTES.convert(timeInPoints.get(i).getTime(), TimeUnit.MILLISECONDS) + threshold)
+                    //Vanessa - Mexi aqui --> threshold*1.1 --> forçar intervalo a ser criado com uma certa folga
+                    && (TimeUnit.MINUTES.convert(timeInPoints.get(i).getTime(), TimeUnit.MILLISECONDS) + threshold * 1.1)
                     >= (TimeUnit.MINUTES.convert(timeInPoints.get(i + 1).getTime(), TimeUnit.MILLISECONDS))) {
 
                 try {
@@ -781,7 +863,8 @@ public class MATSG_R {
                 }
 
                 listSTI.add(new STI(aspTime, (float) cont / timeInPoints.size()));//add occurrence or STI into rank list
-//                System.out.println("STI: " + aspTime + " points: " + cont + " times: " + timeInPoints.size());
+                System.out.println("STI: " + aspTime + " points: " + cont + " times: " + timeInPoints.size());
+
                 //reset aux values
                 cont = 1;
                 aspTime = null;
@@ -789,13 +872,23 @@ public class MATSG_R {
 
         }
 
+//        System.out.println("List STI: "+listSTI);
+//        System.out.println("Pontos na cell: "+timeInPoints.size());
+//        System.exit(0);
         // Ordernate temporal ranking 
         listSTI.sort(Comparator.comparing(STI::getProportion).reversed()); // order (DESC) STI by proportion
 
+        // Vanessa: alteração do threshold_rv para 40% do maior valor
+        // Parei aqui
+        double threshold_rv = (listSTI.get(0).getProportion());
+//        System.out.println("Item maximo: "+threshold_rv);
+        threshold_rv *= cutRV;
+//        System.out.println("Tau do item: "+threshold_rv);
+        
         // based into valid interval, it is created the Representative points for further compute them
         for (STI eachSTI : listSTI) {
-
-            if (eachSTI.getProportion() > threshold_rv) {
+            //VAnessa: mexi aqui: alter ">" to ">="
+            if (eachSTI.getProportion() >= threshold_rv) {
 
                 Centroid repP = new Centroid();
 
@@ -917,11 +1010,11 @@ public class MATSG_R {
      * Writes the generated representative trajectory in a new .csv file
      *
      * @param fileOutput -- output file name
-     * @param ext -- Extension of the file (e.g. csv)
      */
     public void writeRepresentativeTrajectory(String fileOutput, String infoBetterRT) {
         try {
-            CSVWriter mxWriter = new CSVWriter("datasets/" + fileOutput + extension);
+            System.out.println("Entrou -- writeRT");
+            CSVWriter mxWriter = new CSVWriter(fileOutput + extension);
             mxWriter.writeLine("Method runtime information:");
             mxWriter.writeLine("Start timestamp: " + initialTemp);
             mxWriter.writeLine("End timestemp: " + new Date());
@@ -948,7 +1041,8 @@ public class MATSG_R {
             mxWriter.close();
         } catch (IOException e) {
 //					Logger.log(Type.ERROR, pfx + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error on writting RT: " + e.toString());
+//e.printStackTrace();
         }
     }
 
@@ -969,10 +1063,22 @@ public class MATSG_R {
      */
     public Map<Object, Double> normalizeRankingValues(Map<String, Integer> mapRank, int sizeCell, char dimension) {
 
+        //Vanessa - mexi aqui --- Lembrar:
+        // ordenar MAP antes
+        double threshold_rv = -1;
+
         Map<Object, Double> newMap = new HashMap<>();
         double trendEachVal;
         for (Map.Entry<String, Integer> eachValue : mapRank.entrySet()) {
             trendEachVal = (double) eachValue.getValue() / sizeCell;
+            //Vanessa - mexi aqui --- RV == 50% do top K:
+            if (threshold_rv == -1) { //se ainda não foi setado o maior valor
+                threshold_rv = (trendEachVal) * cutRV;
+                System.out.println("Categorical value: ");
+                System.out.println("Value max: "+trendEachVal);
+                System.out.println("Threshold RV: "+threshold_rv);
+            
+            }
             if (trendEachVal >= threshold_rv) {
                 newMap.put(eachValue.getKey(), trendEachVal);
             }
@@ -1018,11 +1124,21 @@ public class MATSG_R {
             System.out.println("Size Unknown: " + mapRank.get("Unknown".toUpperCase()));
             System.out.println("Cell Size without null values: " + sizeNotNull);
         }
+
         if (sizeNotNull < sizeCell) {
+            //Vanessa - mexi aqui --- Lembrar:
+            // ordenar MAP antes
+            double threshold_rv = -1;
+
             for (Map.Entry<String, Integer> eachValue : mapRank.entrySet()) {
                 if (!eachValue.getKey().equalsIgnoreCase("Unknown")) {
                     trendEachVal = (double) eachValue.getValue() / sizeNotNull;
-                    //                System.out.println(eachValue.getKey() + " " + trendEachVal);
+
+                    // Vanessa - mexi aqui - RV = 50% do top K
+                    if (threshold_rv == -1) {
+                        threshold_rv = trendEachVal * 0.5;
+                    }
+
                     if (trendEachVal >= threshold_rv) {
                         newMap.put(eachValue.getKey(), trendEachVal);
                     }
@@ -1115,6 +1231,138 @@ public class MATSG_R {
 
     public void notConsiderNulls() {
         considerNulls = false;
+    }
+
+    // Validation -- 
+    public void rank_MUITAS(String fileOutput) throws ParseException {
+        /*
+        Passo a passo do que fazer:
+
+        ---- **analise setting of threshold on MUITAS paper
+         */
+        System.out.println("Entrou - Write rank MUITAS");
+
+        if (betterRT.getPointList().isEmpty()) {
+            System.out.println("RT zerada");
+
+        } else {
+
+            MUITAS measure = new MUITAS();
+
+            //Compute thresholds
+            //3D with equal weight (0.33) e totalizando 1.0
+            measure.setWeight("SPATIAL", 0.34f);
+            measure.setWeight("TIME", 0.33f);
+
+            float auxWeight = 0.33f / (attributes.size());
+//        System.out.println("Lista de semantic att: " + attributes);
+            for (SemanticAspect eachAtt : attributes) {
+
+                measure.setWeight(eachAtt, auxWeight);
+
+            }
+
+            Map<Object, Double> rankMeasures = new HashMap<>();
+            String infoMeasure = "";
+            for (MultipleAspectTrajectory eachTraj : listAllTrajectories) {
+
+                rankMeasures.put(eachTraj, measure.similarityOf(betterRT, eachTraj));
+
+            }
+
+            rankMeasures = rankMeasures.entrySet().stream()
+                    .sorted(Map.Entry.<Object, Double>comparingByValue().reversed())
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                            (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+            System.out.println("Rank MUITAS: " + rankMeasures);
+
+            int countTclass = 0;
+            int countRetrivied = 0;
+
+            for (Map.Entry<Object, Double> retriviedT : rankMeasures.entrySet()) {
+                countRetrivied++;
+                infoMeasure
+                        += ((MultipleAspectTrajectory) retriviedT.getKey()).getId() + ", "
+                        + retriviedT.getValue() + ", "
+                        + countRetrivied + ", ";
+                if (listTrajectories.contains((MultipleAspectTrajectory) retriviedT.getKey())) {
+                    countTclass++;
+                    infoMeasure += "1";
+                } else {
+                    infoMeasure += "0";
+                }
+                infoMeasure += "\n";
+                if (countTclass == listTrajectories.size()) {
+                    break;
+                }
+            }
+
+            System.out.println("|T_class| = " + countTclass);
+            System.out.println("|T_retrivied| = " + countRetrivied);
+            System.out.println("Precision = " + ((double) countTclass / countRetrivied));
+
+//        ---- write on a new file CSV each line the measure of each T and if this T is of the cluster used to compute RT
+//        ---- next: write on a new File the rank of MUITAS --> id,measure,rank,clusterOfRT
+            try {
+                CSVWriter mxWriter = new CSVWriter(fileOutput + "[Validation]" + extension);
+                mxWriter.writeLine("Method validation information:");
+                mxWriter.writeLine("|Ground Truth|, |all input dataset|, |T.retrivied|, Precision, Recall, F-Score");
+                //vanessa: verificar se o calculo do Precision está correto, E se o calculo de similaridade está correto. Pois minha melhor Tr 5 - 15 deu 70% de média? entre todas do cluster e Precision de 10% só ?
+                mxWriter.writeLine(listTrajectories.size() + ", " + listAllTrajectories.size() + ", " + countRetrivied + ", " + ((double) listTrajectories.size() / countRetrivied) + ", ??, ??");
+
+                mxWriter.writeLine("##");
+                mxWriter.writeLine("Measure description:");
+                mxWriter.writeLine("Trajectory ID, MUITAS, #rank, Ground Truth?");
+                mxWriter.writeLine(infoMeasure);
+                mxWriter.flush();
+                mxWriter.close();
+
+                CSVWriter valWriter;
+
+                String fileCompleteValidation = directory + "output\\" + filename + "[Validation]" + extension;
+                if (!new File(fileCompleteValidation).exists()) {
+                    valWriter = new CSVWriter(fileCompleteValidation);
+                    valWriter.writeLine("Method validation information:");
+                    valWriter.writeLine("Setting rc, |Ground Truth|, |all input dataset|, |T.retrivied|, Precision, Recall, F-Score");
+
+                } else {
+                    valWriter = new CSVWriter(fileCompleteValidation, true);
+                }
+                valWriter.writeLine(rc + ", " + listTrajectories.size() + ", " + listAllTrajectories.size() + ", " + countRetrivied + ", " + ((double) listTrajectories.size() / countRetrivied) + ", ??, ??");
+                valWriter.writeLine(rc + ", " + listTrajectories.size() + ", " + listAllTrajectories.size() + ", " + countRetrivied + ", " + ((double) listTrajectories.size() / countRetrivied) + ", ??, ??");
+                valWriter.flush();
+                valWriter.close();
+
+            } catch (IOException e) {
+                System.err.println("Error on rank input trajectories X RT: " + e);
+            }
+
+        }
+
+    }
+
+    private void loadAllDataset() throws IOException, ParseException {
+
+        java.io.Reader input = new FileReader(directory + filenameFullDataset + extension);
+        BufferedReader reader = new BufferedReader(input);
+
+        String datasetRow = reader.readLine();
+
+        datasetRow = reader.readLine();
+        String[] datasetColumns;
+        //EoF - To get the trajectory data of dataset of each line
+        while (datasetRow != null) {
+            datasetColumns = datasetRow.toUpperCase().split(SEPARATOR);
+            addAttributeValues(datasetColumns);
+            datasetRow = reader.readLine();
+        }
+
+        reader.close();
+
+    }
+
+    public static void setFilenameFullDataset(String filenameFullDataset) {
+        MATSG_T_Validation.filenameFullDataset = filenameFullDataset;
     }
 
 }

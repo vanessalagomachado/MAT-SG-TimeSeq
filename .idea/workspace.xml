@@ -36,7 +36,7 @@
       <recent name="F:\Google Drive\Aulas\Doutorado\UFSC\Pesquisa DOC\Prototipo v2\Ext TimeSeq\MAT-SG_TimeSeq" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Batch.runExperiment_MATSG-TimeSeq[Foursquare][Validation]">
     <configuration name="runExperiment_MATSG-TimeSeq[Foursquare]" type="BatchConfigurationType" factoryName="Batch" temporary="true">
       <module name="MAT-SG_TimeSeq" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -46,8 +46,38 @@
       <option name="PARAMETERS" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="runExperiment_MATSG-TimeSeq[Foursquare][Validation]" type="BatchConfigurationType" factoryName="Batch" temporary="true">
+      <module name="MAT-SG_TimeSeq" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SCRIPT_NAME" value="runExperiment_MATSG-TimeSeq[Foursquare][Validation].bat" />
+      <option name="PARAMETERS" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="runExperiment_MATSG-TimeSeq[RE]" type="BatchConfigurationType" factoryName="Batch" temporary="true">
+      <module name="MAT-SG_TimeSeq" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SCRIPT_NAME" value="runExperiment_MATSG-TimeSeq[RE].bat" />
+      <option name="PARAMETERS" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="runExperiment_MATSG-TimeSeq[RE][Validation]" type="BatchConfigurationType" factoryName="Batch" temporary="true">
+      <module name="MAT-SG_TimeSeq" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SCRIPT_NAME" value="runExperiment_MATSG-TimeSeq[RE][Validation].bat" />
+      <option name="PARAMETERS" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Batch.runExperiment_MATSG-TimeSeq[Foursquare][Validation]" />
+        <item itemvalue="Batch.runExperiment_MATSG-TimeSeq[RE][Validation]" />
+        <item itemvalue="Batch.runExperiment_MATSG-TimeSeq[RE]" />
         <item itemvalue="Batch.runExperiment_MATSG-TimeSeq[Foursquare]" />
       </list>
     </recent_temporary>
